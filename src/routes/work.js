@@ -4,17 +4,20 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-// ✅ ADD WORK
+// ADD WORK
 router.post('/', auth, async (req, res) => {
+    console.log("WORK HIT");
   try {
     const { task, started_at, ended_at } = req.body;
 
-    // basic validation
+    if (!task) {
+      return res.status(400).json({ error: "Task is required" });
+    }
+
     if (!ended_at) {
       return res.status(400).json({ error: "End time required" });
     }
 
-    // default start time = now
     const startTime = started_at ? new Date(started_at) : new Date();
     const endTime = new Date(ended_at);
 
@@ -41,7 +44,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 
-// ✅ GET ALL WORK LOGS
+// GET WORK
 router.get('/', auth, async (req, res) => {
   try {
     const conn = await pool.getConnection();
@@ -53,15 +56,28 @@ router.get('/', auth, async (req, res) => {
           w.task,
           w.started_at,
           w.ended_at,
-          TIMESTAMPDIFF(MINUTE, w.started_at, w.ended_at) AS minutes
-       FROM work_log w
+          CAST(TIMESTAMPDIFF(MINUTE, w.started_at, w.ended_at) AS SIGNED) AS minutes
+       FROM work_logs w
        JOIN users u ON w.user_id = u.id
        ORDER BY w.created_at DESC`
     );
 
     conn.release();
 
-    res.json(rows);
+    //res.json(rows);
+    
+    const safeRows = rows.map(row => {
+    return Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+        key,
+        typeof value === 'bigint' ? Number(value) : value
+        ])
+    );
+    console.log(rows);
+    });
+
+    res.json(safeRows);
+
 
   } catch (err) {
     console.error(err);

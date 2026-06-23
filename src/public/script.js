@@ -1,13 +1,17 @@
+console.log("SCRIPT LOADED");
+
 let token = "";
 let user = null;
 
-// ---------- LOGIN ----------
 
+
+// ---------- LOGIN ----------
 async function login() {
   try {
     const res = await fetch('/api/users/login', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      credentials: 'include', 
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: document.getElementById('logEmail').value,
         password: document.getElementById('logPass').value
@@ -20,16 +24,15 @@ async function login() {
       return setStatus(data.error || "Login failed", false);
     }
 
-    token = data.token;
     user = data.user;
 
-    setStatus("✅ Login successful");
+    setStatus("Login successful");
 
     showApp();
     loadWork();
 
   } catch (err) {
-    setStatus("❌ Server error", false);
+    setStatus("Server error", false);
   }
 }
 
@@ -64,8 +67,13 @@ async function register() {
 
 
 // ---------- LOGOUT ----------
-function logout() {
-  token = "";
+async function logout() {
+  await fetch('/api/users/logout', {
+    method: 'POST',
+    credentials: 'include'
+  });
+
+  // reset UI
   user = null;
 
   document.getElementById('app').classList.add('hidden');
@@ -73,12 +81,13 @@ function logout() {
 }
 
 // ---------- UI SWITCH ----------
+
 function showApp() {
   document.getElementById('auth').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
 
   document.getElementById('welcome').innerText =
-    "Welcome user ID: " + user.id;
+    "Welcome, " + user.first_name;
 
   setDefaultTime();
 }
@@ -94,31 +103,31 @@ function setDefaultTime() {
 
 // ---------- ADD WORK ----------
 async function addWork() {
-  await fetch('http://localhost:3000/api/work', {
-    method: 'POST',
-    headers: {
-      'Content-Type':'application/json',
-      'Authorization': 'Bearer ' + token
+  const res = await fetch('/api/work', {    
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+        'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      task: task.value,
-      started_at: start.value,
-      ended_at: end.value
+      task: document.getElementById('task').value,
+      started_at: document.getElementById('start').value,
+      ended_at: document.getElementById('end').value
     })
   });
 
-  loadWork();
+  const data = await res.json();
+  console.log(data);
 }
 
 // ---------- LOAD WORK ----------
 async function loadWork() {
-  const res = await fetch('http://localhost:3000/api/work', {
-    headers: {
-      'Authorization': 'Bearer ' + token
-    }
+  const res = await fetch('/api/work', {
+    credentials: 'include'
   });
 
   const data = await res.json();
+  console.log("DATA:", data);
 
   const table = document.getElementById('table');
 
@@ -166,3 +175,32 @@ document.getElementById('workBtn')
 document.getElementById('logoutBtn')
   .addEventListener('click', logout);
 
+
+window.onload = async () => {
+  try {
+    const res = await fetch('/api/work', {
+      credentials: 'include'
+    });
+    console.log("STATUS:", res.status);
+    if (res.status === 401) {
+      // ni loginan
+      showAuth();
+      return;
+    }
+
+    // vse ostalo (200 ali 304) = login OK
+    showApp();
+    loadWork();
+
+  } catch (err) {
+    console.error(err);
+    showAuth();
+  }
+};
+
+
+
+function showAuth() {
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('auth').classList.remove('hidden');
+}

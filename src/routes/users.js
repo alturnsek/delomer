@@ -6,7 +6,7 @@ const pool = require('../config/db');
 const router = express.Router();
 
 
-// ✅ REGISTER
+// REGISTER
 router.post('/register', async (req, res) => {
   try {
     const { email, password, first_name, last_name } = req.body;
@@ -48,7 +48,7 @@ router.post('/register', async (req, res) => {
 });
 
 
-// ✅ LOGIN
+// LOGIN
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -68,32 +68,36 @@ router.post('/login', async (req, res) => {
 
     const user = rows[0];
 
-    // compare password
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // create JWT
+    // TOKEN NAREDIŠ TUKAJ
     const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email
-      },
+      { id: user.id },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email
-      }
-    });
+    
+    res
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: false, // na production TRUE (https)
+        sameSite: 'Lax',
+        maxAge: 1000 * 60 * 60 // 1h
+      })
+      .json({
+        user: {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email
+        }
+      });
+
 
   } catch (err) {
     console.error(err);
