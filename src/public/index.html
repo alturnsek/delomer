@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tiktak</title>
+  <style>
+    body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
+    input, button { margin:5px; padding:8px; }
+    table { margin:auto; margin-top:20px; border-collapse: collapse; }
+    td, th { padding:10px; border:1px solid white; }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<h1>Tiktak</h1>
+
+<!-- AUTH -->
+<div id="auth">
+
+  <h2>Register</h2>
+  <input id="regFirst" placeholder="First name">
+  <input id="regLast" placeholder="Last name"><br>
+  <input id="regEmail" placeholder="Email">
+  <input id="regPass" type="password" placeholder="Password">
+  <button id="registerBtn">Register</button>
+
+  <h2>Login</h2>
+  <input id="logEmail" placeholder="Email">
+  <input id="logPass" type="password" placeholder="Password">  
+  <button id="loginBtn">Login</button>
+  
+
+    <p id="status"></p>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+  <h2 id="welcome"></h2>
+  <button id="logoutBtn">Logout</button>
+
+  <h3>Add Work</h3>
+  <input id="task" placeholder="Task"><br>
+
+  <label>Start:</label>
+  <input id="start" type="datetime-local">
+
+  <label>End:</label>
+  <input id="end" type="datetime-local"><br>
+
+  <button id="workBtn">Add</button>
+
+  <h3>Work logs</h3>
+  <table id="table"></table>
+
+</div>
+
+
+
+</body>
+<script src="/script.js"></script>
+</html>
