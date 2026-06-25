@@ -14,8 +14,114 @@ body {
 ========================= */
 .container {
   max-width: 380px;
+  width: 100%;
   margin: 80px auto;
 }
+
+.main-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.main-header {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  padding: 0 20px;
+
+  display: flex;
+  align-items: center; 
+  justify-content: center;
+
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%); /* ✅ center tudi vertikalno */
+}
+
+.logo img {
+  height: 80px;
+  display: block;
+}
+
+/* ✅ desna stran */
+
+.header-right {
+  position: absolute;
+  right: 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  white-space: nowrap;
+}
+
+
+/* user text */
+
+
+#headerUser {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+
+
+/* logout button */
+#headerLogout {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;  
+  display: flex;
+  align-items: center;
+  height: 32px;
+  transform: translateY(-4px);
+}
+
+.header-right > * {
+  display: flex;
+  align-items: center;
+  height: 32px;   /* ✅ isti height za vse */
+}
+
+
+#headerLogout:hover {
+  background: #dc2626;
+}
+
+
+.main-footer {
+  margin-top: 50px;
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #777;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#app,
+.container {
+  flex: 1;
+}
+
 
 /* =========================
    ✅ CARD
@@ -64,6 +170,20 @@ input:focus {
   margin-top: -5px;
   margin-bottom: 5px;
 }
+
+input.errorInput {
+  border: 2px solid #ef4444 !important;
+  background-color: #fef2f2;
+}
+
+
+input[type="email"]:invalid {
+  border: 2px solid #ef4444;
+  background-color: #fef2f2;
+}
+
+
+
 
 /* =========================
    ✅ BUTTON
@@ -394,3 +514,4 @@ body:not(.loading) #loader {
 .work-form.editing {
   border: 2px solid #22c55e;
 }
+

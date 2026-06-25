@@ -6,11 +6,26 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="loading">
+  
+<header class="main-header">
+  <div class="logo">
+    <a href="/"><img class="logo" src="logo.png" alt="Delomer" title="Delomer logo"></a> 
+  </div>
+  
+  <div class="header-right">
+    <div class="inline">
+      <span id="headerUser">Pozdravljen, uporabnik</span>      
+    </div>
+  <button id="headerLogout">Odjava</button>
+  </div>
+
+</header>
+
 
 <div id="loader">
   <div class="spinner"></div>
 </div>
-
+<main class="main-content">
 <div class="container">
 
   <!-- LOGIN -->
@@ -81,9 +96,7 @@
 <div id="app" class="hidden">
 
   <div style="display:flex; justify-content:space-between; align-items:center;">
-    <h2>Dashboard</h2>
-    <h3 id="welcomeText">Pozdravljen, uporabnik</h3>
-    <button id="logoutBtn" style="width:auto;background:#ef4444;">Odjava</button>
+    <h2>Vnos dela</h2>
   </div>
 
 
@@ -119,6 +132,12 @@
     </div>
   </div>
 </div>
+</main>
+<footer class="main-footer">
+  <p>© 2026 Delomer</p>
+  <p>Kontakt: aleksander.turnsek@student.um.si</p>
+</footer>
+
 <script src="script.js"></script>
 </body>
 </html>

@@ -18,8 +18,8 @@ async function checkAuth() {
 
     const data = await res.json();
 
-    const name = data.user.first_name || "uporabnik";
-    document.getElementById("welcomeText").innerText =  `Pozdravljen/a, ${name}`;
+    const name = data.user?.first_name || "uporabnik";
+    document.getElementById("headerUser").innerText =  `Pozdravljen/a, ${name}`;
 
     document.getElementById("start").value = getNowDateTime();
     document.getElementById("end").value = getNowDateTime();
@@ -29,11 +29,12 @@ async function checkAuth() {
     if (data.loggedIn && data.user) {
       authDiv.classList.add("hidden");
       appDiv.classList.remove("hidden");
-
+      document.querySelector(".header-right").style.display = "flex";
       loadWork();
     } else {
       authDiv.classList.remove("hidden");
       appDiv.classList.add("hidden");
+      document.querySelector(".header-right").style.display = "none";
     }
 
   } catch (err) {
@@ -60,6 +61,14 @@ async function login(e) {
   const passwordError = document.getElementById("loginPasswordError");
   const generalError = document.getElementById("loginGeneralError");
 
+  
+  const emailInput = document.getElementById("login-email");
+  const passwordInput = document.getElementById("login-password");
+
+  emailInput.classList.remove("errorInput");
+  passwordInput.classList.remove("errorInput");
+
+
   // ✅ reset errors
   emailError.innerText = "";
   passwordError.innerText = "";
@@ -69,15 +78,23 @@ async function login(e) {
 
   if (!email) {
     emailError.innerText = "Vnesi email";
+    emailInput.classList.add("errorInput");
+    hasError = true;
+
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailError.innerText = "Neveljaven email";
+    emailInput.classList.add("errorInput");
     hasError = true;
   }
 
   if (!password) {
     passwordError.innerText = "Vnesi geslo";
+    passwordInput.classList.add("errorInput");
     hasError = true;
   }
 
   if (hasError) return;
+
 
   const btn = document.getElementById("loginBtn");
   if (btn) btn.innerText = "Prijavljam...";
@@ -93,7 +110,10 @@ async function login(e) {
 
   if (!res.ok) {
     generalError.innerText = "Napačen email ali geslo";
-    return;
+
+    emailInput.classList.add("errorInput");
+    passwordInput.classList.add("errorInput");
+  return;
   }
 
   location.reload();
@@ -118,12 +138,26 @@ function showLogin() {
 
 // STEP 1
 async function registerStep1() {
-  console.log("STEP 1 CLICKED");
   const email = document.getElementById("reg-email").value.trim();
-  const password = document.getElementById("reg-password").value.trim();
+  const password = document.getElementById("reg-password").value.trim();  
 
-  if (!email || !password) {
-    alert("Izpolni vsa polja");
+  const emailError = document.getElementById("emailError");
+  const passwordError = document.getElementById("passwordError");
+
+  emailError.innerText = "";
+  passwordError.innerText = "";
+  if (!email) {
+    emailError.innerText = "Vnesi email";
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailError.innerText = "Neveljaven email";
+    return;
+  }
+
+  if (!password) {
+    passwordError.innerText = "Vnesi geslo";
     return;
   }
 
@@ -137,8 +171,8 @@ async function registerStep1() {
 
   const checkData = await check.json();
 
-  if (checkData.exists) {
-    alert("Ta email je že uporabljen");
+  if (checkData.exists) {    
+    emailError.innerText = "Email je že uporabljen";
     return;
   }
 
@@ -392,7 +426,7 @@ document.getElementById("regStep1Btn")?.addEventListener("click", registerStep1)
 document.getElementById("regStep2Btn")?.addEventListener("click", registerStep2);
 
 document.getElementById("addWorkBtn")?.addEventListener("click", addWork);
-document.getElementById("logoutBtn")?.addEventListener("click", logout);
+document.getElementById("headerLogout")?.addEventListener("click", logout);
 
 
 function getNowDateTime() {
@@ -447,8 +481,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function resetForm() {
   document.getElementById("task").value = "";
-  document.getElementById("start").value = "";
-  document.getElementById("end").value = "";
+  document.getElementById("start").value = getNowDateTime();
+  document.getElementById("end").value = getNowDateTime();
+
 
   // ✅ reset edit mode
   editingWorkId = null;
@@ -476,3 +511,55 @@ if (taskInput && taskCount) {
     }
   });
 }
+
+const loginEmailInput = document.getElementById("login-email");
+const loginPasswordInput = document.getElementById("login-password");
+
+const loginEmailError = document.getElementById("loginEmailError");
+const loginPasswordError = document.getElementById("loginPasswordError");
+
+if (loginEmailInput && loginPasswordInput) {  
+  loginEmailInput.addEventListener("input", () => {
+    if (loginEmailInput.value.trim() !== "") {
+      loginEmailError.innerText = "";
+      loginEmailInput.classList.remove("errorInput");
+    }
+  });
+  loginPasswordInput.addEventListener("input", () => {
+    if (loginPasswordInput.value.trim() !== "") {
+      loginPasswordError.innerText = "";
+      loginPasswordInput.classList.remove("errorInput");
+    }
+  });
+}
+
+
+if (loginEmailInput && loginPasswordInput) {  
+
+  loginEmailInput.addEventListener("input", () => {
+    const val = loginEmailInput.value.trim();
+
+    if (!val) {
+      loginEmailError.innerText = "";
+      loginEmailInput.classList.remove("errorInput");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      loginEmailError.innerText = "Napačen format email";
+      loginEmailInput.classList.add("errorInput");
+    } else {
+      loginEmailError.innerText = "";
+      loginEmailInput.classList.remove("errorInput");
+    }
+  });
+
+  loginPasswordInput.addEventListener("input", () => {
+    if (loginPasswordInput.value.trim() !== "") {
+      loginPasswordError.innerText = "";
+      loginPasswordInput.classList.remove("errorInput");
+    }
+  });
+
+}
+
