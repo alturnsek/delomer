@@ -1,0 +1,396 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", Arial, sans-serif;
+  background: #f7f9fc;
+  color: #1a1a1a;
+}
+
+/* =========================
+   ✅ CENTER LAYOUT
+========================= */
+.container {
+  max-width: 380px;
+  margin: 80px auto;
+}
+
+/* =========================
+   ✅ CARD
+========================= */
+.box {
+  display: none;
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.box.active {
+  display: block;
+}
+
+/* =========================
+   ✅ HEADINGS
+========================= */
+h2 {
+  margin-bottom: 20px;
+  font-size: 22px;
+}
+
+/* =========================
+   ✅ INPUTS
+========================= */
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+input:focus {
+  border-color: #4f46e5;
+  outline: none;
+}
+
+
+.error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: -5px;
+  margin-bottom: 5px;
+}
+
+/* =========================
+   ✅ BUTTON
+========================= */
+button {
+  width: 100%;
+  padding: 12px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #4338ca;
+}
+
+/* =========================
+   ✅ SOCIAL
+========================= */
+.social {
+  display: block;
+  text-align: center;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  margin-top: 10px;
+  text-decoration: none;
+  color: #333;
+}
+
+.social:hover {
+  background: #f1f5f9;
+}
+
+/* =========================
+   ✅ SWITCH
+========================= */
+.switch {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.switch span {
+  color: #4f46e5;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* =========================
+   ✅ SEPARATOR
+========================= */
+.separator {
+  text-align: center;
+  margin: 15px 0;
+  font-size: 12px;
+  color: #999;
+}
+
+/* =========================
+   ✅ APP DASHBOARD
+========================= */
+#app {
+  max-width: 700px;
+  margin: 40px auto;
+}
+
+/* =========================
+   ✅ WORK FORM (FIXED)
+========================= */
+.work-form {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+/* ŠTEVEC*/
+
+#taskCount {
+  font-size: 12px;
+  color: #777;
+  text-align: right;
+  margin-top: 2px;
+}
+
+#taskCount.limit {
+  color: #ef4444; /* rdeče */
+}
+
+/* TASK FULL WIDTH */
+.full-row input {
+  width: 100%;
+}
+
+/* LOWER ROW */
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+/* FIELD */
+.field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.field label {
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 5px;
+}
+
+/* INPUT STYLE */
+.work-form input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+/* BUTTON INLINE */
+.work-form button {
+  width: auto;
+  padding: 10px 16px;
+}
+
+/* =========================
+   ✅ WORK LIST
+========================= */
+#workList {
+  list-style: none;
+  padding: 0;
+}
+
+#workList li {
+  background: white;
+  padding: 15px;
+  margin-bottom: 10px;
+  margin-right: 10px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
+
+/* =========================
+   ✅ HIDDEN
+========================= */
+.hidden {
+  display: none;
+}
+
+/* =========================
+   ✅ LOADING STATE
+========================= */
+body.loading .container,
+body.loading #app {
+  display: none;
+}
+
+/* =========================
+   ✅ LOADER OVERLAY
+========================= */
+#loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* =========================
+   ✅ SPINNER
+========================= */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #444;
+  border-top: 5px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* =========================
+   ✅ ANIMATION
+========================= */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hide loader */
+body:not(.loading) #loader {
+  display: none;
+}
+
+/* =========================
+   ✅ EDIT BTN
+========================= */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions strong {
+  white-space: nowrap;
+}
+
+.editBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  color: #4f46e5;
+}
+
+.editBtn:hover {
+  background-color: white;
+  transform: scale(1.5);
+}
+/* =========================
+   ✅ DELETE BTN
+========================= */
+
+.deleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #ef4444;
+}
+
+.deleteBtn:hover {
+  background-color: white;
+  transform: scale(1.5);
+}
+/* =========================
+   ✅ POPUP
+========================= */
+
+
+#confirmModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+
+  display: none; /* ✅ KLJUČNO! */
+}
+
+/* ✅ when visible */
+#confirmModal.show {
+  display: flex;
+}
+
+
+.confirm-box {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 280px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.confirm-actions button {
+  flex: 1;
+}
+
+#confirmYes {
+  background: #ef4444;
+}
+
+#confirmYes:hover {
+  background: #dc2626;
+}
+
+
+.confirm-box {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* =========================
+   ✅ EDITING
+========================= */
+
+.work-form.editing {
+  border: 2px solid #22c55e;
+}

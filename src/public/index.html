@@ -1,64 +1,124 @@
 <!DOCTYPE html>
-<html>
+<html lang="sl">
 <head>
-  <title>Tiktak</title>
-  <link rel="icon" href="favicon.ico">
-  <style>
-    body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
-    input, button { margin:5px; padding:8px; }
-    table { margin:auto; margin-top:20px; border-collapse: collapse; }
-    td, th { padding:10px; border:1px solid white; }
-
-    .hidden { display: none; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Delomer</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="loading">
 
-<h1>Tiktak</h1>
-
-<!-- AUTH -->
-<div id="auth">
-
-  <h2>Register</h2>
-  <input id="regFirst" placeholder="First name">
-  <input id="regLast" placeholder="Last name"><br>
-  <input id="regEmail" placeholder="Email">
-  <input id="regPass" type="password" placeholder="Password">
-  <button id="registerBtn">Register</button>
-
-  <h2>Login</h2>
-  <input id="logEmail" placeholder="Email">
-  <input id="logPass" type="password" placeholder="Password">  
-  <button id="loginBtn">Login</button>
-  
-
-    <p id="status"></p>
+<div id="loader">
+  <div class="spinner"></div>
 </div>
 
-<!-- APP -->
+<div class="container">
+
+  <!-- LOGIN -->
+
+<div id="login-box" class="box active">
+  <h2>Prijava</h2>
+
+  <form id="loginForm">
+    <input id="login-email" type="email" placeholder="Email">
+    <div id="loginEmailError" class="error"></div>
+    <input id="login-password" type="password" placeholder="Geslo">
+    <div id="loginPasswordError" class="error"></div>
+
+    <div id="loginGeneralError" class="error"></div>
+
+    <button type="submit" id="loginBtn">Prijava</button>
+  </form>
+
+
+    <div class="separator">ali</div>
+
+    <!-- ✅ Google login -->
+    <a href="/api/users/auth/google" class="social">
+      Nadaljuj z Google
+    </a>
+
+    <p class="switch">
+      Nimaš računa?
+      <span id="goRegister">Registriraj se</span>
+    </p>
+  </div>
+
+
+  <!-- REGISTER STEP 1 -->
+  <div id="register-step1" class="box">
+    <h2>Registracija</h2>
+
+    
+    <input id="reg-email" type="email" placeholder="Email">
+    <div id="emailError" style="color:red; font-size:12px;"></div>
+
+    <input id="reg-password" type="password" placeholder="Geslo">
+
+    <button id="regStep1Btn">Naprej</button>
+
+    <p class="switch">
+      Že imaš račun?
+      <span id="goLogin">Nazaj na prijavo</span>
+    </p>
+  </div>
+
+
+  <!-- REGISTER STEP 2 -->
+  <div id="register-step2" class="box">
+    <h2>Še malo...</h2>
+
+    <input id="first_name" placeholder="Ime">
+    <input id="last_name" placeholder="Priimek">
+    <input placeholder="Društvo (placeholder)">
+
+    <button id="regStep2Btn">Zaključi registracijo</button>
+  </div>
+
+</div>
+
+
+<!-- ✅ APP -->
 <div id="app" class="hidden">
 
-  <h2 id="welcome"></h2>
-  <button id="logoutBtn">Logout</button>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>Dashboard</h2>
+    <h3 id="welcomeText">Pozdravljen, uporabnik</h3>
+    <button id="logoutBtn" style="width:auto;background:#ef4444;">Odjava</button>
+  </div>
 
-  <h3>Add Work</h3>
-  <input id="task" placeholder="Task"><br>
 
-  <label>Start:</label>
-  <input id="start" type="datetime-local">
+    <div class="work-form">
+      <div class="field">
+        <input id="task" placeholder="Kaj si delal?" maxlength="255" rows="3">
+        <div id="taskCount">0 / 255</div>
+      </div>
 
-  <label>End:</label>
-  <input id="end" type="datetime-local"><br>
+      <div class="field">
+        <label>Začetek dela</label>
+        <input id="start" type="datetime-local">
+      </div>
 
-  <button id="workBtn">Add</button>
+      <div class="field">
+        <label>Konec dela</label>
+        <input id="end" type="datetime-local">
+      </div>
 
-  <h3>Work logs</h3>
-  <table id="table"></table>
+      <button id="addWorkBtn">+ Dodaj</button>
+    </div>
+
+
+  <ul id="workList"></ul>
 
 </div>
-
-
-<script src="/script.js"></script>
+<div id="confirmModal" class="hidden">
+  <div class="confirm-box">
+    <p>Ali res želiš izbrisati vnos?</p>
+    <div class="confirm-actions">
+      <button id="confirmYes">Izbriši</button>
+      <button id="confirmNo">Prekliči</button>
+    </div>
+  </div>
+</div>
+<script src="script.js"></script>
 </body>
-
 </html>
