@@ -75,7 +75,7 @@ passport.use(new LocalStrategy(
   GOOGLE STRATEGY
 ========================= */
 
-passport.use(new GoogleStrategy({
+/*passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: "/api/users/auth/google/callback"
@@ -118,7 +118,7 @@ passport.use(new GoogleStrategy({
   } catch (err) {
     return done(err);
   }
-}));
+}));*/
 
 
 /* =========================
