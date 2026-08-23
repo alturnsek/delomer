@@ -8,7 +8,7 @@ let workToDelete = null;
 let editingWorkId = null;
 
 /* =========================
-   ✅ AUTH CHECK
+  AUTH CHECK
 ========================= */
 async function checkAuth() {
   try {
@@ -40,7 +40,6 @@ async function checkAuth() {
   } catch (err) {
     console.error("AUTH ERROR:", err);
   } finally {
-    // ✅ odstrani loading (najbolj pomembno)
     document.body.classList.remove("loading");
   }
 }
@@ -49,7 +48,7 @@ checkAuth();
 
 
 /* =========================
-   ✅ LOGIN
+  LOGIN
 ========================= */
 
 
@@ -69,7 +68,7 @@ async function login(e) {
   passwordInput.classList.remove("errorInput");
 
 
-  // ✅ reset errors
+  //reset errors
   emailError.innerText = "";
   passwordError.innerText = "";
   generalError.innerText = "";
@@ -121,7 +120,7 @@ async function login(e) {
 
 
 /* =========================
-   ✅ REGISTER FLOW
+  REGISTER FLOW
 ========================= */
 
 function showRegister() {
@@ -161,7 +160,7 @@ async function registerStep1() {
     return;
   }
 
-  // ✅ preveri email
+  //preveri email
   const check = await fetch("/api/users/check-email", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -176,7 +175,7 @@ async function registerStep1() {
     return;
   }
 
-  // ✅ če je ok → nadaljuj na step1 API
+  //če je ok nadaljuj na step1 API
   const res = await fetch("/api/users/register/step1", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -190,16 +189,13 @@ async function registerStep1() {
     return;
   }
 
-
-
   document.getElementById("register-step1").classList.remove("active");
   document.getElementById("register-step2").classList.add("active");
 }
 
-
 // STEP 2
 async function registerStep2() {
-console.log("STEP 2 CLICKED ✅"); 
+console.log("STEP 2 CLICKED"); 
 
 
   const first_name = document.getElementById("first_name").value.trim();
@@ -233,16 +229,12 @@ if (!res.ok) {
     alert("Napaka pri registraciji");
     return;
   }
-  
-
-
-
   checkAuth();
 }
 
 
 /* =========================
-   ✅ WORK
+  WORK
 ========================= */
 
 async function loadWork() {
@@ -277,8 +269,6 @@ async function loadWork() {
     list.appendChild(li);
   });
 
-  /* ✅ EDIT */
- 
   document.querySelectorAll(".editBtn").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
@@ -291,10 +281,10 @@ async function loadWork() {
       document.getElementById("end").value = formatDate(item.ended_at);
 
       
-    // ✅ BONUS: posodobi števec
+    //posodobi števec
     document.getElementById("taskCount").innerText = `${item.task.length} / 255`;
 
-      // ✅ EDIT MODE
+      //EDIT MODE
       editingWorkId = item.id;
 
       const addBtn = document.getElementById("addWorkBtn");
@@ -306,7 +296,7 @@ async function loadWork() {
   });
 
 
-  /* ✅ DELETE (odpre modal) */
+  // DELETE (odpre modal)
 
   document.querySelectorAll(".deleteBtn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -319,7 +309,7 @@ async function loadWork() {
 }
 
 /* =========================
-   ✅ ADD WORK
+  ADD WORK
 ========================= */
 
 async function addWork() {
@@ -341,7 +331,7 @@ async function addWork() {
   let res;
 
   if (editingWorkId) {
-    // ✅ EDIT MODE
+    //EDIT MODE
     res = await fetch(`/api/work/${editingWorkId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -349,7 +339,7 @@ async function addWork() {
       body: JSON.stringify(payload)
     });
   } else {
-    // ✅ CREATE MODE
+    //CREATE MODE
     res = await fetch("/api/work", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -363,7 +353,7 @@ async function addWork() {
     return;
   }
 
-  // ✅ reset forma
+  //reset forma
   resetForm();
 
   loadWork();
@@ -372,7 +362,7 @@ async function addWork() {
 
 
 /* =========================
-   ✅ LOGOUT
+  LOGOUT
 ========================= */
 async function logout() {
   await fetch("/api/users/logout", {
@@ -385,7 +375,7 @@ async function logout() {
 
 
 /* =========================
-   ✅ EVENT LISTENERS
+  EVENT LISTENERS
 ========================= */
 
 const emailInput = document.getElementById("reg-email");
@@ -411,8 +401,6 @@ emailInput.addEventListener("blur", async () => {
     emailError.innerText = "";
   }
 });
-
-
 
 document.getElementById("loginForm")?.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -445,8 +433,6 @@ function formatDate(dateStr) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-
-
 document.addEventListener("DOMContentLoaded", () => {
 
   const confirmYes = document.getElementById("confirmYes");
@@ -455,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!confirmYes || !confirmNo || !modal) return;
 
-  /* ✅ CONFIRM DELETE */
+  // CONFIRM DELETE
     confirmYes.addEventListener("click", async () => {
       if (!workToDelete) return;
 
@@ -478,22 +464,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
-
 function resetForm() {
   document.getElementById("task").value = "";
   document.getElementById("start").value = getNowDateTime();
   document.getElementById("end").value = getNowDateTime();
 
 
-  // ✅ reset edit mode
+  //reset edit mode
   editingWorkId = null;
 
-  // ✅ button nazaj
+  //button nazaj
   const btn = document.getElementById("addWorkBtn");
   btn.innerText = "+ Dodaj";
   btn.style.background = "#4f46e5";
 
-  // ✅ odstrani border
+  //odstrani border
   document.querySelector(".work-form").classList.remove("editing");
 }
 

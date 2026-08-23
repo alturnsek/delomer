@@ -6,7 +6,7 @@ const passport = require("passport");
 const router = express.Router();
 
 /* =========================
-   ✅ LOGIN
+  LOGIN
 ========================= */
 router.post("/login", (req, res, next) => {
   passport.authenticate("local", (err, user) => {
@@ -26,7 +26,7 @@ router.post("/login", (req, res, next) => {
 
 
 /* =========================
-   ✅ REGISTER STEP 1
+  REGISTER STEP 1
 ========================= */
 router.post("/register/step1", async (req, res) => {
   try {
@@ -64,7 +64,7 @@ router.post("/register/step1", async (req, res) => {
 
 
 /* =========================
-   ✅ REGISTER STEP 2
+  REGISTER STEP 2
 ========================= */
 router.post("/register/step2", async (req, res) => {
   try {
@@ -89,7 +89,7 @@ router.post("/register/step2", async (req, res) => {
 
     const insertId = insertResult.insertId;
 
-    // ✅ GET USER
+    //GET USER
     const rows = await db.query(
       "SELECT * FROM users WHERE id = ?",
       [insertId]
@@ -101,17 +101,17 @@ router.post("/register/step2", async (req, res) => {
       return res.status(500).json({ message: "User fetch failed" });
     }
 
-    // ✅ LOGIN
+    //LOGIN
     req.login(user, (err) => {
       if (err) {
         console.error("LOGIN ERROR:", err);
         return res.status(500).json({ message: "Login error" });
       }
 
-      // ✅ pomembno: cleanup
+      //cleanup
       req.session.tmpUser = null;
 
-      // ✅ session commit
+      //session commit
       req.session.save((err) => {
         if (err) {
           console.error("SESSION SAVE ERROR:", err);
@@ -130,7 +130,7 @@ router.post("/register/step2", async (req, res) => {
 
 
 /* =========================
-   ✅ GOOGLE AUTH
+  GOOGLE AUTH - to ne dela
 ========================= */
 router.get("/auth/google",
   passport.authenticate("google", {
@@ -149,7 +149,7 @@ router.get("/auth/google/callback",
 
 
 /* =========================
-   ✅ CURRENT USER
+  CURRENT USER
 ========================= */
 router.get("/me", (req, res) => {
   if (!req.user) {
@@ -169,7 +169,7 @@ router.get("/me", (req, res) => {
 
 
 /* =========================
-   ✅ LOGOUT
+  LOGOUT
 ========================= */
 router.post("/logout", (req, res) => {
   req.logout(() => {
@@ -182,7 +182,7 @@ router.post("/logout", (req, res) => {
 
 
 /* =========================
-   ✅ CHECK EMAIL
+  CHECK EMAIL
 ========================= */
 router.post("/check-email", async (req, res) => {
   try {

@@ -9,7 +9,7 @@ const bcrypt = require("bcrypt");
 const db = require("./db");
 console.log("GOOGLE ID:", process.env.GOOGLE_CLIENT_ID);
 /* =========================
-   ✅ SERIALIZE / DESERIALIZE
+  SERIALIZE / DESERIALIZE
 ========================= */
 
 passport.serializeUser((user, done) => {
@@ -33,7 +33,7 @@ passport.deserializeUser(async (id, done) => {
 
 
 /* =========================
-   ✅ LOCAL STRATEGY
+  LOCAL STRATEGY
 ========================= */
 
 passport.use(new LocalStrategy(
@@ -51,7 +51,7 @@ passport.use(new LocalStrategy(
 
       const user = rows[0];
 
-      // ✅ IMPORTANT: social accounts nimajo passworda
+      // social accounti nimajo passworda
       if (!user.password_hash) {
         return done(null, false, { message: "Uporabi social login" });
       }
@@ -72,7 +72,7 @@ passport.use(new LocalStrategy(
 
 
 /* =========================
-   ✅ GOOGLE STRATEGY
+  GOOGLE STRATEGY
 ========================= */
 
 passport.use(new GoogleStrategy({
@@ -92,7 +92,7 @@ passport.use(new GoogleStrategy({
       [email]
     );
 
-    // ✅ če user NE obstaja → ga ustvarimo
+    //če user ne obstaja ga ustvarimo
     if (!rows.length) {
       const [result] = await db.query(
         `INSERT INTO users (email, password_hash, first_name, last_name)
@@ -112,7 +112,7 @@ passport.use(new GoogleStrategy({
       return done(null, newUser[0]);
     }
 
-    // ✅ če obstaja
+    //če obstaja
     return done(null, rows[0]);
 
   } catch (err) {
@@ -122,8 +122,8 @@ passport.use(new GoogleStrategy({
 
 
 /* =========================
-   ✅ FACEBOOK (READY)
-   ⚠️ Rabi app keys
+  FACEBOOK (READY)
+  Rabi app keys
 ========================= */
 
 /*passport.use(new FacebookStrategy({
@@ -167,3 +167,4 @@ passport.use(new GoogleStrategy({
 }));*/
 
 
+//dodati je treba še vsaj x

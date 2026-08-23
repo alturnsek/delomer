@@ -10,7 +10,7 @@ body {
 }
 
 /* =========================
-   ✅ CENTER LAYOUT
+  CENTER LAYOUT
 ========================= */
 .container {
   max-width: 380px;
@@ -42,7 +42,7 @@ body {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%); /* ✅ center tudi vertikalno */
+  transform: translate(-50%, -50%); 
 }
 
 .logo img {
@@ -50,7 +50,7 @@ body {
   display: block;
 }
 
-/* ✅ desna stran */
+/* desna stran */
 
 .header-right {
   position: absolute;
@@ -94,7 +94,7 @@ body {
 .header-right > * {
   display: flex;
   align-items: center;
-  height: 32px;   /* ✅ isti height za vse */
+  height: 32px; 
 }
 
 
@@ -124,7 +124,7 @@ body {
 
 
 /* =========================
-   ✅ CARD
+  CARD
 ========================= */
 .box {
   display: none;
@@ -139,7 +139,7 @@ body {
 }
 
 /* =========================
-   ✅ HEADINGS
+  HEADINGS
 ========================= */
 h2 {
   margin-bottom: 20px;
@@ -147,7 +147,7 @@ h2 {
 }
 
 /* =========================
-   ✅ INPUTS
+  INPUTS
 ========================= */
 input {
   width: 100%;
@@ -186,7 +186,7 @@ input[type="email"]:invalid {
 
 
 /* =========================
-   ✅ BUTTON
+  BUTTON
 ========================= */
 button {
   width: 100%;
@@ -205,7 +205,7 @@ button:hover {
 }
 
 /* =========================
-   ✅ SOCIAL
+  SOCIAL
 ========================= */
 .social {
   display: block;
@@ -224,7 +224,7 @@ button:hover {
 }
 
 /* =========================
-   ✅ SWITCH
+  SWITCH
 ========================= */
 .switch {
   margin-top: 15px;
@@ -239,7 +239,7 @@ button:hover {
 }
 
 /* =========================
-   ✅ SEPARATOR
+  SEPARATOR
 ========================= */
 .separator {
   text-align: center;
@@ -249,7 +249,7 @@ button:hover {
 }
 
 /* =========================
-   ✅ APP DASHBOARD
+  APP DASHBOARD
 ========================= */
 #app {
   max-width: 700px;
@@ -257,7 +257,7 @@ button:hover {
 }
 
 /* =========================
-   ✅ WORK FORM (FIXED)
+  WORK FORM 
 ========================= */
 .work-form {
   background: white;
@@ -321,7 +321,7 @@ button:hover {
 }
 
 /* =========================
-   ✅ WORK LIST
+  WORK LIST
 ========================= */
 #workList {
   list-style: none;
@@ -340,14 +340,14 @@ button:hover {
 }
 
 /* =========================
-   ✅ HIDDEN
+  HIDDEN
 ========================= */
 .hidden {
   display: none;
 }
 
 /* =========================
-   ✅ LOADING STATE
+  LOADING STATE
 ========================= */
 body.loading .container,
 body.loading #app {
@@ -355,7 +355,7 @@ body.loading #app {
 }
 
 /* =========================
-   ✅ LOADER OVERLAY
+  LOADER OVERLAY
 ========================= */
 #loader {
   position: fixed;
@@ -371,7 +371,7 @@ body.loading #app {
 }
 
 /* =========================
-   ✅ SPINNER
+  SPINNER
 ========================= */
 .spinner {
   width: 50px;
@@ -383,7 +383,7 @@ body.loading #app {
 }
 
 /* =========================
-   ✅ ANIMATION
+  ANIMATION
 ========================= */
 @keyframes spin {
   to {
@@ -397,7 +397,7 @@ body:not(.loading) #loader {
 }
 
 /* =========================
-   ✅ EDIT BTN
+  EDIT BTN
 ========================= */
 
 .actions {
@@ -424,7 +424,7 @@ body:not(.loading) #loader {
   transform: scale(1.5);
 }
 /* =========================
-   ✅ DELETE BTN
+  DELETE BTN
 ========================= */
 
 .deleteBtn {
@@ -440,7 +440,7 @@ body:not(.loading) #loader {
   transform: scale(1.5);
 }
 /* =========================
-   ✅ POPUP
+  POPUP
 ========================= */
 
 
@@ -454,11 +454,10 @@ body:not(.loading) #loader {
   align-items: center;
   justify-content: center;
   z-index: 9999;
-
-  display: none; /* ✅ KLJUČNO! */
+  display: none;
 }
 
-/* ✅ when visible */
+/*when visible */
 #confirmModal.show {
   display: flex;
 }
@@ -508,7 +507,7 @@ body:not(.loading) #loader {
 }
 
 /* =========================
-   ✅ EDITING
+  EDITING
 ========================= */
 
 .work-form.editing {

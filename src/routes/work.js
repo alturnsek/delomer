@@ -4,7 +4,7 @@ const pool = require('../config/db');
 const router = express.Router();
 
 /* =========================
-   ✅ SESSION AUTH MIDDLEWARE
+  SESSION AUTH MIDDLEWARE
 ========================= */
 function requireAuth(req, res, next) {
   if (!req.user) {
@@ -13,12 +13,12 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// ✅ uporabi za vse route
+//uporabi za vse route
 router.use(requireAuth);
 
 
 /* =========================
-   ✅ ADD WORK
+  ADD WORK
 ========================= */
 router.post('/', async (req, res) => {
   try {
@@ -59,7 +59,7 @@ router.post('/', async (req, res) => {
 
 
 /* =========================
-   ✅ GET USER WORK
+  GET USER WORK
 ========================= */
 router.get('/', async (req, res) => {
   try {
@@ -99,7 +99,7 @@ router.get('/', async (req, res) => {
 
 
 /* =========================
-   ✅ DELETE WORK
+  DELETE WORK
 ========================= */
 router.delete('/:id', async (req, res) => {
   try {
@@ -121,7 +121,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 /* =========================
-   ✅ UPDATE WORK
+  UPDATE WORK
 ========================= */
 router.put('/:id', async (req, res) => {
   try {

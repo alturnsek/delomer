@@ -5,20 +5,20 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const session = require("express-session");
 const passport = require("passport");
-
+const auth = require("./middleware/auth");
 require("dotenv").config();
 
 // routes
 const users = require("./routes/users");
 const work = require("./routes/work");
 
-// ✅ passport config
+//passport config
 require("./config/passport");
 
 const app = express();
 
 /* =========================
-   ✅ DEBUG (optional)
+  DEBUG
 ========================= */
 app.use((req, res, next) => {
   console.log("COOKIE HEADER:", req.headers.cookie);
@@ -26,10 +26,10 @@ app.use((req, res, next) => {
 });
 
 /* =========================
-   ✅ SECURITY
+SECURITY
 ========================= */
 app.use(helmet());
-
+//za rate limit
 /*app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -38,56 +38,59 @@ app.use(helmet());
 );*/
 
 /* =========================
-   ✅ CORS (FIXED)
+  CORS
 ========================= */
 app.use(
   cors({
-    origin: true, // ✅ BREZ narekovajev!
+    origin: true, 
     credentials: true
   })
 );
 
 /* =========================
-   ✅ PARSERJI
+  PARSERJI
 ========================= */
 app.use(express.json());
 
 /* =========================
-   ✅ SESSION (FIXED)
+  SESSION
 ========================= */
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
-    rolling: true, // ✅ BREZ narekovajev!
+    rolling: true,
     cookie: {
       httpOnly: true,
-      secure: false, // production → true (HTTPS)
+      secure: false, // za production dam na true ko bom mel nginx in cert
       sameSite: "lax"
     }
   })
 );
 
 /* =========================
-   ✅ PASSPORT (order important!)
+  PASSPORT
 ========================= */
 app.use(passport.initialize());
 app.use(passport.session());
 
 /* =========================
-   ✅ STATIC FILES
+  STATIC FILES
 ========================= */
 app.use(express.static(path.join(__dirname, "public")));
 
 /* =========================
-   ✅ ROUTES
+  ROUTES
 ========================= */
 app.use("/api/users", users);
 app.use("/api/work", work);
+app.get("/profile", (req, res) => {
+res.sendFile(path.join(__dirname, "public", "profile.html"));
+});
 
 /* =========================
-   ✅ AUTH CHECK
+  AUTH CHECK
 ========================= */
 app.get("/api/me", (req, res) => {
   if (!req.user) {
@@ -106,21 +109,21 @@ app.get("/api/me", (req, res) => {
 });
 
 /* =========================
-   ✅ HTML
+  HTML
 ========================= */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 /* =========================
-   ✅ HEALTH CHECK
+  HEALTH CHECK
 ========================= */
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
 
 /* =========================
-   ✅ TRUST PROXY (optional)
+  TRUST PROXY
 ========================= */
 app.set("trust proxy", 1);
 
