@@ -20,6 +20,7 @@ services:
 
   app:
     build: .
+    image: ${DOCKERHUB_USERNAME:-delomer}/delomer:latest
     restart: unless-stopped
     env_file:
       - .env

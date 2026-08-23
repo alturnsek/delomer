@@ -1,0 +1,45 @@
+name: CI/CD - Build, Push, Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    name: Build & push Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/delomer:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/delomer:${{ github.sha }}
+
+  notify-webhook:
+    name: Notify VM (deploy webhook)
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sign and send deploy webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
+        run: |
+          payload=$(printf '{"repository":"delomer","ref":"%s","sha":"%s"}' "${{ github.ref }}" "${{ github.sha }}")
+          signature=$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.* //')
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Signature-256: sha256=$signature" \
+            -d "$payload"

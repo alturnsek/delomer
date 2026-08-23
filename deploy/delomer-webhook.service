@@ -1,0 +1,17 @@
+[Unit]
+Description=Delomer deploy webhook receiver
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+; POPRAVI pot in uporabnika glede na dejansko namestitev na VM:
+WorkingDirectory=/home/CHANGE_ME/delomer
+EnvironmentFile=/home/CHANGE_ME/delomer/.env
+ExecStart=/usr/bin/node /home/CHANGE_ME/delomer/deploy/webhook-server.js
+Restart=on-failure
+RestartSec=5
+User=CHANGE_ME
+
+[Install]
+WantedBy=multi-user.target
