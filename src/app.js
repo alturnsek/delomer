@@ -28,7 +28,16 @@ app.use((req, res, next) => {
 /* =========================
 SECURITY
 ========================= */
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "upgrade-insecure-requests": null // aplikacija (za zdaj) teče brez TLS
+      }
+    }
+  })
+);
 //za rate limit
 /*app.use(
   rateLimit({
