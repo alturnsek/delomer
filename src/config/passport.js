@@ -122,7 +122,7 @@ passport.use(new LocalStrategy(
 
 
 /* =========================
-  FACEBOOK (READY)
+  FACEBOOK
   Rabi app keys
 ========================= */
 

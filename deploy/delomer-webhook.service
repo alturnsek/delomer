@@ -5,13 +5,12 @@ Requires=docker.service
 
 [Service]
 Type=simple
-; POPRAVI pot in uporabnika glede na dejansko namestitev na VM:
-WorkingDirectory=/home/CHANGE_ME/delomer
-EnvironmentFile=/home/CHANGE_ME/delomer/.env
-ExecStart=/usr/bin/node /home/CHANGE_ME/delomer/deploy/webhook-server.js
+WorkingDirectory=/home/aleksandert/delomer
+EnvironmentFile=/home/aleksandert/delomer/.env
+ExecStart=/usr/bin/node /home/aleksandert/delomer/deploy/webhook-server.js
 Restart=on-failure
 RestartSec=5
-User=CHANGE_ME
+User=aleksandert
 
 [Install]
 WantedBy=multi-user.target
