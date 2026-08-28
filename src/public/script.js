@@ -6,6 +6,7 @@ const taskCount = document.getElementById("taskCount");
 
 let workToDelete = null;
 let editingWorkId = null;
+let currentUserId = null;
 
 /* =========================
   AUTH CHECK
@@ -35,6 +36,7 @@ async function checkAuth() {
       document.querySelector(".header-right").style.display = "flex";
 
       const role = data.user.role;
+      currentUserId = data.user.id;
 
       document.getElementById("superadminSection").classList.toggle("hidden", role !== "SUPER_ADMIN");
       document.getElementById("adminSection").classList.toggle("hidden", role !== "ADMIN");
@@ -43,8 +45,14 @@ async function checkAuth() {
       if (role === "SUPER_ADMIN") {
         loadOrganizationsSuperadmin();
       } else {
+        loadCategories();
+        loadParticipantOptions();
         loadWork();
-        if (role === "ADMIN") loadOrgMembers();
+
+        if (role === "ADMIN") {
+          loadOrgMembers();
+          loadAdminWork();
+        }
       }
     } else {
       authDiv.classList.remove("hidden");
@@ -294,6 +302,161 @@ document.getElementById("bulkInviteBtn")?.addEventListener("click", async () => 
 
 
 /* =========================
+  KATEGORIJE DELA
+========================= */
+async function loadCategories() {
+  const res = await fetch("/api/work/categories", { credentials: "include" });
+  if (!res.ok) return;
+
+  const categories = await res.json();
+
+  const select = document.getElementById("workCategory");
+  if (select) {
+    select.innerHTML = `<option value="">Brez kategorije</option>` +
+      categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+  }
+
+  const list = document.getElementById("categoryList");
+  if (list) {
+    list.innerHTML = categories.length
+      ? categories.map(c => `<li><span>${c.name}</span><button class="deleteCategoryBtn" data-id="${c.id}">❌</button></li>`).join("")
+      : "<li>Ni še kategorij</li>";
+
+    document.querySelectorAll(".deleteCategoryBtn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        await fetch(`/api/admin/categories/${btn.dataset.id}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
+
+        loadCategories();
+      });
+    });
+  }
+}
+
+document.getElementById("addCategoryBtn")?.addEventListener("click", async () => {
+  const input = document.getElementById("newCategoryName");
+  const msg = document.getElementById("categoryMsg");
+  const name = input.value.trim();
+
+  msg.innerText = "";
+
+  if (!name) {
+    msg.innerText = "Vnesi ime kategorije";
+    return;
+  }
+
+  const res = await fetch("/api/admin/categories", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ name })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  input.value = "";
+  loadCategories();
+});
+
+
+/* =========================
+  ČLANI DRUŠTVA (za izbiro sodelavcev pri vnosu dela)
+========================= */
+async function loadParticipantOptions() {
+  const container = document.getElementById("participantCheckboxes");
+  if (!container) return;
+
+  const res = await fetch("/api/work/organization-members", { credentials: "include" });
+  if (!res.ok) return;
+
+  const members = await res.json();
+
+  container.innerHTML = members.length
+    ? members.map(m => `
+        <label>
+          <input type="checkbox" class="participantCheckbox" value="${m.id}">
+          ${m.first_name} ${m.last_name}
+        </label>
+      `).join("")
+    : "<span>Ni drugih članov v društvu</span>";
+}
+
+
+/* =========================
+  ADMIN - DELO V DRUŠTVU
+========================= */
+async function loadAdminWork() {
+  const list = document.getElementById("adminWorkList");
+  if (!list) return;
+
+  const res = await fetch("/api/admin/work", { credentials: "include" });
+  if (!res.ok) return;
+
+  const items = await res.json();
+
+  list.innerHTML = items.length
+    ? items.map(renderAdminWorkItem).join("")
+    : "<li>Ni še vnosov</li>";
+
+  document.querySelectorAll(".approveBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/admin/work/${btn.dataset.id}/approve`, {
+        method: "POST",
+        credentials: "include"
+      });
+
+      loadAdminWork();
+    });
+  });
+
+  document.querySelectorAll(".rejectBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const reason = prompt("Razlog za zavrnitev:");
+      if (!reason) return;
+
+      await fetch(`/api/admin/work/${btn.dataset.id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason })
+      });
+
+      loadAdminWork();
+    });
+  });
+}
+
+function renderAdminWorkItem(w) {
+  const hours = (w.minutes / 60).toFixed(2);
+  const participants = w.participants.map(p => `${p.first_name} ${p.last_name}`).join(", ");
+
+  return `
+    <li>
+      <span>
+        <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
+        <span class="status-badge status-${w.status}">${w.status}</span><br>
+        <small>${w.category_name || "brez kategorije"} · ${hours} h · sodelavci: ${participants || "-"}</small>
+        ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog: ${w.rejection_reason}</small>` : ""}
+      </span>
+      <div class="actions">
+        ${w.status === "PENDING" ? `
+          <button class="approveBtn" data-id="${w.id}">✔️</button>
+          <button class="rejectBtn" data-id="${w.id}">✖️</button>
+        ` : ""}
+      </div>
+    </li>
+  `;
+}
+
+
+/* =========================
   WORK
 ========================= */
 
@@ -314,15 +477,25 @@ async function loadWork() {
 
   data.forEach(w => {
     const hours = (w.minutes / 60).toFixed(2);
+    const participantNames = w.participants.map(p => `${p.first_name} ${p.last_name}`).join(", ");
+    const isOwner = w.user_id === currentUserId;
+    const isLocked = w.status === "APPROVED";
 
     const li = document.createElement("li");
 
     li.innerHTML = `
-      <span>${w.task}</span>
+      <span>
+        ${w.task}
+        <span class="status-badge status-${w.status}">${w.status}</span><br>
+        <small>${w.category_name || "brez kategorije"}${participantNames ? " · " + participantNames : ""}</small>
+        ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog zavrnitve: ${w.rejection_reason}</small>` : ""}
+      </span>
       <div class="actions">
         <strong>${hours} h</strong>
-        <button class="editBtn" data-id="${w.id}">✏️</button>
-        <button class="deleteBtn" data-id="${w.id}">❌</button>
+        ${isOwner && !isLocked ? `
+          <button class="editBtn" data-id="${w.id}">✏️</button>
+          <button class="deleteBtn" data-id="${w.id}">❌</button>
+        ` : ""}
       </div>
     `;
 
@@ -339,8 +512,12 @@ async function loadWork() {
       document.getElementById("task").value = item.task;
       document.getElementById("start").value = formatDate(item.started_at);
       document.getElementById("end").value = formatDate(item.ended_at);
+      document.getElementById("workCategory").value = item.category_id || "";
 
-      
+      document.querySelectorAll(".participantCheckbox").forEach(cb => {
+        cb.checked = item.participants.some(p => p.id == cb.value);
+      });
+
     //posodobi števec
     document.getElementById("taskCount").innerText = `${item.task.length} / 255`;
 
@@ -376,6 +553,10 @@ async function addWork() {
   const task = document.getElementById("task").value.trim();
   const start = document.getElementById("start").value;
   const end = document.getElementById("end").value;
+  const category_id = document.getElementById("workCategory").value || null;
+
+  const participant_ids = Array.from(document.querySelectorAll(".participantCheckbox:checked"))
+    .map(cb => Number(cb.value));
 
   if (!task || !end) {
     alert("Izpolni podatke");
@@ -385,7 +566,9 @@ async function addWork() {
   const payload = {
     task,
     started_at: start,
-    ended_at: end
+    ended_at: end,
+    category_id,
+    participant_ids
   };
 
   let res;
@@ -498,6 +681,8 @@ function resetForm() {
   document.getElementById("task").value = "";
   document.getElementById("start").value = getNowDateTime();
   document.getElementById("end").value = getNowDateTime();
+  document.getElementById("workCategory").value = "";
+  document.querySelectorAll(".participantCheckbox").forEach(cb => cb.checked = false);
 
 
   //reset edit mode

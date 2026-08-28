@@ -95,6 +95,19 @@
     </div>
 
     <ul id="orgMembersList"></ul>
+
+    <h2>Kategorije dela</h2>
+    <div class="work-form">
+      <div class="row">
+        <input id="newCategoryName" placeholder="Ime kategorije">
+        <button id="addCategoryBtn">Dodaj</button>
+      </div>
+      <div id="categoryMsg" class="error"></div>
+    </div>
+    <ul id="categoryList"></ul>
+
+    <h2>Delo v društvu</h2>
+    <ul id="adminWorkList"></ul>
   </div>
 
   <div id="workSection">
@@ -117,6 +130,16 @@
       <div class="field">
         <label>Konec dela</label>
         <input id="end" type="datetime-local">
+      </div>
+
+      <div class="field">
+        <label>Kategorija</label>
+        <select id="workCategory"><option value="">Brez kategorije</option></select>
+      </div>
+
+      <div class="field">
+        <label>Sodelavci (opravljali delo skupaj)</label>
+        <div id="participantCheckboxes" class="checkbox-list"></div>
       </div>
 
       <button id="addWorkBtn">+ Dodaj</button>

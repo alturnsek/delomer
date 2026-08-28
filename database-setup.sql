@@ -8,9 +8,8 @@
 --
 -- MVP funkcionalnost: SUPER_ADMIN ustvarja društva, ADMIN društva vabi
 -- člane (email + nastavitev gesla preko povezave), prijava (local + Google),
--- vpis dela.
--- (Approval workflow za work_logs (DRAFT/PENDING/APPROVED), kategorije dela
--- in skupinski vnosi so predvideni za kasnejšo fazo razvoja.)
+-- vpis dela s kategorijami in skupinskimi udeleženci, potrjevanje/zavračanje
+-- (PENDING/APPROVED/REJECTED) z 30-dnevnim auto-approve.
 --
 -- ---------------------------------------------------------
 -- KAKO UPORABITI TO DATOTEKO
@@ -63,13 +62,42 @@ CREATE TABLE IF NOT EXISTS users (
   CONSTRAINT fk_users_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS work_categories (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_work_categories_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_work_categories_org_name (organization_id, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS work_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
+  user_id INT NOT NULL, -- ustvarjatelj (edini, ki lahko ureja dokler ni APPROVED)
+  organization_id INT NULL,
+  category_id INT NULL,
   task VARCHAR(255) NOT NULL,
+  status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  pending_since TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- za 30-dnevni auto-approve
+  reviewed_by INT NULL,
+  reviewed_at DATETIME NULL,
+  rejection_reason VARCHAR(500) NULL,
+  is_auto_approved TINYINT(1) NOT NULL DEFAULT 0,
   started_at DATETIME NOT NULL,
   ended_at DATETIME NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_work_logs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_work_logs_user_id (user_id)
+  CONSTRAINT fk_work_logs_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL,
+  CONSTRAINT fk_work_logs_category FOREIGN KEY (category_id) REFERENCES work_categories(id) ON DELETE SET NULL,
+  CONSTRAINT fk_work_logs_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_work_logs_user_id (user_id),
+  INDEX idx_work_logs_organization_id (organization_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS work_log_participants (
+  work_log_id INT NOT NULL,
+  user_id INT NOT NULL,
+  PRIMARY KEY (work_log_id, user_id),
+  CONSTRAINT fk_wlp_work_log FOREIGN KEY (work_log_id) REFERENCES work_logs(id) ON DELETE CASCADE,
+  CONSTRAINT fk_wlp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

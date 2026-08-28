@@ -43,19 +43,23 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 - [x] Admin vabi uporabnike (posamič + bulk), vidi seznam članov z aktivacijskim statusom — `POST/GET /api/admin/users`, `POST /api/admin/users/bulk`
 - [ ] Admin lahko uporabnika tudi deaktivira / mu spremeni vlogo (trenutno samo dodajanje, ni CRUD)
 
-### Epic: Work Logs — DRAFT → zaključi (KAN-8)
-- [ ] Admin upravlja kategorije dela (CRUD, po društvu) — USER jih izbira iz spustnega menija ob vnosu dela
-- [ ] Ustvari DRAFT z začetnim časom
-- [ ] Uredi DRAFT (čas, tip dela, udeleženci, gostje)
-- [ ] Skupinski vnos z minutami po udeležencu (override), gostje se ne štejejo v statistiko
-- [ ] "Zaključi" → prehod DRAFT/REJECTED → PENDING, zaklene zapis za člane
-- [ ] Seznam "Moje aktivnosti" s filtri (status, obdobje)
+### Epic: Work Logs (KAN-8)
+*(brez ločenega DRAFT koraka — vnos gre direktno v PENDING, poenostavljeno glede na dejanske zahteve)*
+- [x] Admin upravlja kategorije dela (dodaj/briši, po društvu) — `POST/DELETE /api/admin/categories`, USER izbira iz spustnega menija (`GET /api/work/categories`)
+- [x] Ustvari vnos (task, čas, kategorija) → status PENDING
+- [x] Skupinski vnos: USER doda sodelavce (`work_log_participants`), validirano da so iz istega društva
+- [x] Uredi vnos — samo ustvarjatelj, samo dokler ni APPROVED; urejanje REJECTED vnosa ga vrne v PENDING
+- [x] Seznam "Moje aktivnosti" — vnosi kjer je uporabnik ustvarjatelj ali sodelavec, s statusom/kategorijo/sodelavci
+- [ ] Gostje (ime+priimek brez računa, ne štejejo v statistiko) — ni implementirano
+- [ ] Filtri po statusu/obdobju na seznamu
 
 ### Epic: Approvals (KAN-9)
-- [ ] Admin approval queue (PENDING, filtri: obdobje/tip/creator)
-- [ ] Potrdi zapis (PENDING → APPROVED, audit log)
-- [ ] Zavrni zapis z obveznim razlogom (PENDING → REJECTED, član lahko popravi)
-- [ ] Auto-approve cron job (PENDING starejši od 30 dni → APPROVED, `is_auto_approved=1`, idempotenten)
+- [x] Admin approval queue — `GET /api/admin/work` (vsi vnosi društva, PENDING najprej)
+- [x] Potrdi zapis (PENDING → APPROVED) — `POST /api/admin/work/:id/approve`
+- [x] Zavrni zapis z obveznim razlogom (PENDING → REJECTED) — `POST /api/admin/work/:id/reject`
+- [x] Auto-approve job (PENDING starejši od 30 dni → APPROVED, `is_auto_approved=1`) — `src/jobs/autoApprove.js`, teče ob zagonu strežnika + vsako uro
+- [x] Admin lahko ureja katerikoli vnos v društvu — `PUT /api/admin/work/:id` (task/čas/kategorija; urejanje sodelavcev za admina še ni na voljo)
+- [ ] Audit log potrditev/zavrnitev (trenutno samo `reviewed_by`/`reviewed_at` na vnosu, brez ločene zgodovine)
 
 ### Epic: Reporting & Export (KAN-10)
 - [ ] Poročilo po članih (samo APPROVED, upošteva override, filter po datumu, sort desc)
