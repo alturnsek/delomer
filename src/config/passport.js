@@ -19,7 +19,10 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(async (id, done) => {
   try {
     const rows = await db.query(
-      "SELECT * FROM users WHERE id = ?",
+      `SELECT users.*, organizations.name AS organization_name
+       FROM users
+       LEFT JOIN organizations ON organizations.id = users.organization_id
+       WHERE users.id = ?`,
       [id]
     );
 
@@ -41,7 +44,10 @@ passport.use(new LocalStrategy(
   async (email, password, done) => {
     try {
       const rows = await db.query(
-        "SELECT * FROM users WHERE email = ?",
+        `SELECT users.*, organizations.name AS organization_name
+         FROM users
+         LEFT JOIN organizations ON organizations.id = users.organization_id
+         WHERE users.email = ?`,
         [email.trim().toLowerCase()]
       );
 

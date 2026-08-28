@@ -19,7 +19,10 @@ async function checkAuth() {
     const data = await res.json();
 
     const name = data.user?.first_name || "uporabnik";
-    document.getElementById("headerUser").innerText =  `Pozdravljen/a, ${name}`;
+    const org = data.user?.organization_name;
+    document.getElementById("headerUser").innerText = org
+      ? `Pozdravljen/a, ${name} (${org})`
+      : `Pozdravljen/a, ${name}`;
 
     document.getElementById("start").value = getNowDateTime();
     document.getElementById("end").value = getNowDateTime();
@@ -191,19 +194,77 @@ async function registerStep1() {
 
   document.getElementById("register-step1").classList.remove("active");
   document.getElementById("register-step2").classList.add("active");
+
+  loadOrganizations();
+  updateOrgModeUI();
 }
+
+
+/* =========================
+  DRUŠTVA (register step2)
+========================= */
+async function loadOrganizations() {
+  const select = document.getElementById("org-select");
+  if (!select) return;
+
+  try {
+    const res = await fetch("/api/users/organizations", {
+      credentials: "include"
+    });
+
+    const orgs = await res.json();
+
+    select.innerHTML = orgs.length
+      ? orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join("")
+      : `<option value="">Ni še nobenega društva</option>`;
+  } catch (err) {
+    console.error("LOAD ORGANIZATIONS ERROR:", err);
+  }
+}
+
+function updateOrgModeUI() {
+  const isJoin = document.getElementById("orgModeJoin").checked;
+
+  document.getElementById("org-name").classList.toggle("hidden", isJoin);
+  document.getElementById("org-select").classList.toggle("hidden", !isJoin);
+}
+
+document.getElementById("orgModeCreate")?.addEventListener("change", updateOrgModeUI);
+document.getElementById("orgModeJoin")?.addEventListener("change", updateOrgModeUI);
+
 
 // STEP 2
 async function registerStep2() {
-console.log("STEP 2 CLICKED"); 
-
-
   const first_name = document.getElementById("first_name").value.trim();
   const last_name = document.getElementById("last_name").value.trim();
+  const orgError = document.getElementById("orgError");
+
+  orgError.innerText = "";
 
   if (!first_name || !last_name) {
     alert("Izpolni ime in priimek");
     return;
+  }
+
+  const org_mode = document.getElementById("orgModeJoin").checked ? "join" : "create";
+
+  let org_name = "";
+  let organization_id = "";
+
+  if (org_mode === "create") {
+    org_name = document.getElementById("org-name").value.trim();
+
+    if (!org_name) {
+      orgError.innerText = "Vnesi ime društva";
+      return;
+    }
+  } else {
+    organization_id = document.getElementById("org-select").value;
+
+    if (!organization_id) {
+      orgError.innerText = "Izberi društvo";
+      return;
+    }
   }
 
   const btn = document.getElementById("regStep2Btn");
@@ -213,22 +274,18 @@ console.log("STEP 2 CLICKED");
     method: "POST",
     headers: {"Content-Type": "application/json"},
     credentials: "include",
-    body: JSON.stringify({ first_name, last_name })
+    body: JSON.stringify({ first_name, last_name, org_mode, org_name, organization_id })
   });
 
-    
-if (!res.ok) {
-  const err = await res.json();
-  console.log("REGISTER ERROR:", err);
-  alert(err.message || "Napaka");
-  return;
-}
   btn.innerText = "Zaključi registracijo";
 
   if (!res.ok) {
-    alert("Napaka pri registraciji");
+    const err = await res.json();
+    console.log("REGISTER ERROR:", err);
+    orgError.innerText = err.message || "Napaka";
     return;
   }
+
   checkAuth();
 }
 

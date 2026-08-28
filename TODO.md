@@ -24,13 +24,14 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 
 ### Epic: Tenancy & Whitelabel (KAN-6)
 *(glej arhitekturno odločitev zgoraj — subdomene opuščene, spodnje je treba reinterpretirati za model "eno domeno + organizacija ob loginu")*
-- [ ] Resolve tenant iz konteksta prijave (namesto iz subdomene), tenant isolation na vseh endpointih
+- [x] Podatkovni model: `organizations` tabela + `users.organization_id`/`users.role` (ADMIN/MEMBER) — registracija zdaj zahteva ustvarjanje ali pridružitev društvu
+- [ ] Tenant isolation na work-log/reporting endpointih (trenutno organizacija ni še nikjer uporabljena za filtriranje podatkov, samo shranjena na uporabniku)
 - [ ] Public tenant branding endpoint (logo/barve društva)
 - [ ] Tenant settings admin UI (admin ureja logo/barve, member read-only)
 
 ### Epic: Auth & User (KAN-7)
-- [ ] Password login (scoped na društvo), brez razkrivanja obstoja uporabnika
-- [ ] RBAC guards (MEMBER vs ADMIN), 403 pri nepooblaščenih dostopih
+- [x] Password login, brez razkrivanja obstoja uporabnika (+ popravljen bug: login/register nista več vračala `password_hash` na frontend)
+- [ ] RBAC guards (MEMBER vs ADMIN) na dejanskih endpointih — vloga se zdaj shrani ob registraciji, a še nič je ne preverja (ni še admin-only route-ov)
 - [ ] Admin upravlja uporabnike (CRUD, aktivacija/deaktivacija, dodelitev vloge)
 
 ### Epic: Work Logs — DRAFT → zaključi (KAN-8)

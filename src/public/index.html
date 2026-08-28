@@ -85,7 +85,15 @@
 
     <input id="first_name" placeholder="Ime">
     <input id="last_name" placeholder="Priimek">
-    <input placeholder="Društvo (placeholder)">
+
+    <div class="org-mode">
+      <label><input type="radio" name="orgMode" id="orgModeCreate" checked> Ustvari novo društvo</label>
+      <label><input type="radio" name="orgMode" id="orgModeJoin"> Pridruži se obstoječemu</label>
+    </div>
+
+    <input id="org-name" placeholder="Ime društva">
+    <select id="org-select" class="hidden"></select>
+    <div id="orgError" class="error"></div>
 
     <button id="regStep2Btn">Zaključi registracijo</button>
   </div>

@@ -6,6 +6,21 @@ const passport = require("passport");
 const router = express.Router();
 
 /* =========================
+  HELPERS
+========================= */
+function toPublicUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    organization_id: user.organization_id,
+    organization_name: user.organization_name,
+    role: user.role
+  };
+}
+
+/* =========================
   LOGIN
 ========================= */
 router.post("/login", (req, res, next) => {
@@ -18,10 +33,27 @@ router.post("/login", (req, res, next) => {
 
       // ✅ session commit
       req.session.save(() => {
-        res.json({ message: "OK", user });
+        res.json({ message: "OK", user: toPublicUser(user) });
       });
     });
   })(req, res, next);
+});
+
+
+/* =========================
+  ORGANIZACIJE (seznam za register step2 - pridružitev obstoječemu)
+========================= */
+router.get("/organizations", async (req, res) => {
+  try {
+    const rows = await db.query(
+      "SELECT id, name FROM organizations ORDER BY name ASC"
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("LIST ORGANIZATIONS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 
@@ -68,7 +100,7 @@ router.post("/register/step1", async (req, res) => {
 ========================= */
 router.post("/register/step2", async (req, res) => {
   try {
-    const { first_name, last_name } = req.body;
+    const { first_name, last_name, org_mode, org_name, organization_id } = req.body;
 
     if (!first_name || !last_name) {
       return res.status(400).json({ message: "Manjkajo podatki" });
@@ -78,20 +110,64 @@ router.post("/register/step2", async (req, res) => {
       return res.status(400).json({ message: "Session expired" });
     }
 
+    if (org_mode !== "create" && org_mode !== "join") {
+      return res.status(400).json({ message: "Izberi društvo" });
+    }
+
+    let resolvedOrgId;
+    let role;
+
+    if (org_mode === "create") {
+      const name = (org_name || "").trim();
+
+      if (!name) {
+        return res.status(400).json({ message: "Vnesi ime društva" });
+      }
+
+      const orgResult = await db.query(
+        "INSERT INTO organizations (name) VALUES (?)",
+        [name]
+      );
+
+      resolvedOrgId = orgResult.insertId;
+      role = "ADMIN";
+    } else {
+      const orgId = Number(organization_id);
+
+      if (!orgId) {
+        return res.status(400).json({ message: "Izberi društvo" });
+      }
+
+      const orgRows = await db.query(
+        "SELECT id FROM organizations WHERE id = ?",
+        [orgId]
+      );
+
+      if (!orgRows.length) {
+        return res.status(400).json({ message: "Društvo ne obstaja" });
+      }
+
+      resolvedOrgId = orgId;
+      role = "MEMBER";
+    }
+
     const { email, password_hash } = req.session.tmpUser;
 
     // ✅ INSERT
     const insertResult = await db.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name)
-       VALUES (?, ?, ?, ?)`,
-      [email, password_hash, first_name, last_name]
+      `INSERT INTO users (email, password_hash, first_name, last_name, organization_id, role)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [email, password_hash, first_name, last_name, resolvedOrgId, role]
     );
 
     const insertId = insertResult.insertId;
 
-    //GET USER
+    //GET USER (z imenom društva)
     const rows = await db.query(
-      "SELECT * FROM users WHERE id = ?",
+      `SELECT users.*, organizations.name AS organization_name
+       FROM users
+       LEFT JOIN organizations ON organizations.id = users.organization_id
+       WHERE users.id = ?`,
       [insertId]
     );
 
@@ -118,7 +194,7 @@ router.post("/register/step2", async (req, res) => {
           return res.status(500).json({ message: "Session save error" });
         }
 
-        res.json({ message: "Registered", user });
+        res.json({ message: "Registered", user: toPublicUser(user) });
       });
     });
 
@@ -158,12 +234,7 @@ router.get("/me", (req, res) => {
 
   res.json({
     loggedIn: true,
-    user: {
-      id: req.user.id,
-      email: req.user.email,
-      first_name: req.user.first_name,
-      last_name: req.user.last_name
-    }
+    user: toPublicUser(req.user)
   });
 });
 

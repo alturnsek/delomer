@@ -6,10 +6,10 @@
 --   src/config/db.js, src/config/passport.js,
 --   src/routes/users.js, src/routes/work.js
 --
--- MVP funkcionalnost: registracija, prijava (local + Google), vpis dela.
--- (Ne vsebuje naprednega modela iz "Uvodna dokumentacija delomer" —
---  multitenancy/roles/approval workflow ipd. — to je predvideno za
---  kasnejšo fazo razvoja, ko bo koda dejansko uporabljala ta model.)
+-- MVP funkcionalnost: registracija (z ustvarjanjem/pridružitvijo društvu),
+-- prijava (local + Google), vpis dela.
+-- (Approval workflow za work_logs (DRAFT/PENDING/APPROVED) je predvideno za
+-- kasnejšo fazo razvoja, ko bo koda dejansko uporabljala ta model.)
 --
 -- ---------------------------------------------------------
 -- KAKO UPORABITI TO DATOTEKO
@@ -41,13 +41,22 @@
 --
 -- =========================================================
 
+CREATE TABLE IF NOT EXISTS organizations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NULL, -- društvo, kateremu uporabnik pripada
+  role ENUM('ADMIN','MEMBER') NOT NULL DEFAULT 'MEMBER',
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL DEFAULT '', -- prazno za social login (Google)
   first_name VARCHAR(100) NOT NULL DEFAULT '',
   last_name VARCHAR(100) NOT NULL DEFAULT '',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_users_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS work_logs (
