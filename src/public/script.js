@@ -33,7 +33,19 @@ async function checkAuth() {
       authDiv.classList.add("hidden");
       appDiv.classList.remove("hidden");
       document.querySelector(".header-right").style.display = "flex";
-      loadWork();
+
+      const role = data.user.role;
+
+      document.getElementById("superadminSection").classList.toggle("hidden", role !== "SUPER_ADMIN");
+      document.getElementById("adminSection").classList.toggle("hidden", role !== "ADMIN");
+      document.getElementById("workSection").classList.toggle("hidden", role === "SUPER_ADMIN");
+
+      if (role === "SUPER_ADMIN") {
+        loadOrganizationsSuperadmin();
+      } else {
+        loadWork();
+        if (role === "ADMIN") loadOrgMembers();
+      }
     } else {
       authDiv.classList.remove("hidden");
       appDiv.classList.add("hidden");
@@ -123,171 +135,162 @@ async function login(e) {
 
 
 /* =========================
-  REGISTER FLOW
+  SUPER ADMIN - DRUŠTVA
 ========================= */
+async function loadOrganizationsSuperadmin() {
+  const list = document.getElementById("orgList");
+  if (!list) return;
 
-function showRegister() {
-  document.getElementById("login-box").classList.remove("active");
-  document.getElementById("register-step1").classList.add("active");
+  const res = await fetch("/api/superadmin/organizations", { credentials: "include" });
+  if (!res.ok) return;
+
+  const orgs = await res.json();
+
+  list.innerHTML = orgs.length
+    ? orgs.map(o => `<li><span>${o.name}</span><span>${o.member_count} članov</span></li>`).join("")
+    : "<li>Ni še nobenega društva</li>";
 }
 
-function showLogin() {
-  document.getElementById("register-step1").classList.remove("active");
-  document.getElementById("register-step2").classList.remove("active");
-  document.getElementById("login-box").classList.add("active");
-}
+document.getElementById("createOrgBtn")?.addEventListener("click", async () => {
+  const name = document.getElementById("newOrgName").value.trim();
+  const admin_first_name = document.getElementById("newOrgAdminFirst").value.trim();
+  const admin_last_name = document.getElementById("newOrgAdminLast").value.trim();
+  const admin_email = document.getElementById("newOrgAdminEmail").value.trim();
+  const msg = document.getElementById("createOrgMsg");
 
+  msg.innerText = "";
+  msg.style.color = "";
 
-// STEP 1
-async function registerStep1() {
-  const email = document.getElementById("reg-email").value.trim();
-  const password = document.getElementById("reg-password").value.trim();  
-
-  const emailError = document.getElementById("emailError");
-  const passwordError = document.getElementById("passwordError");
-
-  emailError.innerText = "";
-  passwordError.innerText = "";
-  if (!email) {
-    emailError.innerText = "Vnesi email";
+  if (!name || !admin_first_name || !admin_last_name || !admin_email) {
+    msg.innerText = "Izpolni vsa polja";
     return;
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    emailError.innerText = "Neveljaven email";
-    return;
-  }
-
-  if (!password) {
-    passwordError.innerText = "Vnesi geslo";
-    return;
-  }
-
-  //preveri email
-  const check = await fetch("/api/users/check-email", {
+  const res = await fetch("/api/superadmin/organizations", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ email })
+    body: JSON.stringify({ name, admin_first_name, admin_last_name, admin_email })
   });
 
-  const checkData = await check.json();
-
-  if (checkData.exists) {    
-    emailError.innerText = "Email je že uporabljen";
-    return;
-  }
-
-  //če je ok nadaljuj na step1 API
-  const res = await fetch("/api/users/register/step1", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    credentials: "include",
-    body: JSON.stringify({ email, password })
-  });
+  const data = await res.json();
 
   if (!res.ok) {
-    const err = await res.json();
-    alert(err.message || "Napaka");
+    msg.innerText = data.message || "Napaka";
     return;
   }
 
-  document.getElementById("register-step1").classList.remove("active");
-  document.getElementById("register-step2").classList.add("active");
+  msg.style.color = "#16a34a";
+  msg.innerText = data.message;
 
-  loadOrganizations();
-  updateOrgModeUI();
-}
+  document.getElementById("newOrgName").value = "";
+  document.getElementById("newOrgAdminFirst").value = "";
+  document.getElementById("newOrgAdminLast").value = "";
+  document.getElementById("newOrgAdminEmail").value = "";
+
+  loadOrganizationsSuperadmin();
+});
 
 
 /* =========================
-  DRUŠTVA (register step2)
+  ADMIN - ČLANI DRUŠTVA
 ========================= */
-async function loadOrganizations() {
-  const select = document.getElementById("org-select");
-  if (!select) return;
+async function loadOrgMembers() {
+  const list = document.getElementById("orgMembersList");
+  if (!list) return;
 
-  try {
-    const res = await fetch("/api/users/organizations", {
-      credentials: "include"
-    });
+  const res = await fetch("/api/admin/users", { credentials: "include" });
+  if (!res.ok) return;
 
-    const orgs = await res.json();
+  const members = await res.json();
 
-    select.innerHTML = orgs.length
-      ? orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join("")
-      : `<option value="">Ni še nobenega društva</option>`;
-  } catch (err) {
-    console.error("LOAD ORGANIZATIONS ERROR:", err);
-  }
+  list.innerHTML = members.length
+    ? members.map(m => `<li><span>${m.first_name} ${m.last_name} — ${m.email}</span><span>${m.activated ? "aktiven" : "čaka aktivacijo"}</span></li>`).join("")
+    : "<li>Ni še članov</li>";
 }
 
-function updateOrgModeUI() {
-  const isJoin = document.getElementById("orgModeJoin").checked;
+document.getElementById("inviteUserBtn")?.addEventListener("click", async () => {
+  const first_name = document.getElementById("inviteFirst").value.trim();
+  const last_name = document.getElementById("inviteLast").value.trim();
+  const email = document.getElementById("inviteEmail").value.trim();
+  const msg = document.getElementById("inviteMsg");
 
-  document.getElementById("org-name").classList.toggle("hidden", isJoin);
-  document.getElementById("org-select").classList.toggle("hidden", !isJoin);
-}
+  msg.innerText = "";
+  msg.style.color = "";
 
-document.getElementById("orgModeCreate")?.addEventListener("change", updateOrgModeUI);
-document.getElementById("orgModeJoin")?.addEventListener("change", updateOrgModeUI);
-
-
-// STEP 2
-async function registerStep2() {
-  const first_name = document.getElementById("first_name").value.trim();
-  const last_name = document.getElementById("last_name").value.trim();
-  const orgError = document.getElementById("orgError");
-
-  orgError.innerText = "";
-
-  if (!first_name || !last_name) {
-    alert("Izpolni ime in priimek");
+  if (!first_name || !last_name || !email) {
+    msg.innerText = "Izpolni vsa polja";
     return;
   }
 
-  const org_mode = document.getElementById("orgModeJoin").checked ? "join" : "create";
-
-  let org_name = "";
-  let organization_id = "";
-
-  if (org_mode === "create") {
-    org_name = document.getElementById("org-name").value.trim();
-
-    if (!org_name) {
-      orgError.innerText = "Vnesi ime društva";
-      return;
-    }
-  } else {
-    organization_id = document.getElementById("org-select").value;
-
-    if (!organization_id) {
-      orgError.innerText = "Izberi društvo";
-      return;
-    }
-  }
-
-  const btn = document.getElementById("regStep2Btn");
-  btn.innerText = "Ustvarjam...";
-
-  const res = await fetch("/api/users/register/step2", {
+  const res = await fetch("/api/admin/users", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ first_name, last_name, org_mode, org_name, organization_id })
+    body: JSON.stringify({ first_name, last_name, email })
   });
 
-  btn.innerText = "Zaključi registracijo";
+  const data = await res.json();
 
   if (!res.ok) {
-    const err = await res.json();
-    console.log("REGISTER ERROR:", err);
-    orgError.innerText = err.message || "Napaka";
+    msg.innerText = data.message || "Napaka";
     return;
   }
 
-  checkAuth();
-}
+  msg.style.color = "#16a34a";
+  msg.innerText = data.message;
+
+  document.getElementById("inviteFirst").value = "";
+  document.getElementById("inviteLast").value = "";
+  document.getElementById("inviteEmail").value = "";
+
+  loadOrgMembers();
+});
+
+document.getElementById("bulkInviteBtn")?.addEventListener("click", async () => {
+  const raw = document.getElementById("bulkInviteText").value.trim();
+  const msg = document.getElementById("bulkInviteMsg");
+
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!raw) {
+    msg.innerText = "Vnesi vsaj eno osebo";
+    return;
+  }
+
+  const users = raw.split("\n")
+    .map(line => {
+      const [first_name, last_name, email] = line.split(",").map(v => (v || "").trim());
+      return { first_name, last_name, email };
+    })
+    .filter(u => u.email);
+
+  const res = await fetch("/api/admin/users/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ users })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  const okCount = data.results.filter(r => r.ok).length;
+  const failed = data.results.filter(r => !r.ok);
+
+  msg.style.color = failed.length ? "" : "#16a34a";
+  msg.innerText = `Povabljenih: ${okCount}/${data.results.length}` +
+    (failed.length ? ` — napake: ${failed.map(f => `${f.email} (${f.message})`).join(", ")}` : "");
+
+  document.getElementById("bulkInviteText").value = "";
+
+  loadOrgMembers();
+});
 
 
 /* =========================
@@ -435,40 +438,10 @@ async function logout() {
   EVENT LISTENERS
 ========================= */
 
-const emailInput = document.getElementById("reg-email");
-const emailError = document.getElementById("emailError");
-
-emailInput.addEventListener("blur", async () => {
-  const email = emailInput.value.trim();
-
-  if (!email) return;
-
-  const res = await fetch("/api/users/check-email", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    credentials: "include",
-    body: JSON.stringify({ email })
-  });
-
-  const data = await res.json();
-
-  if (data.exists) {
-    emailError.innerText = "Email že obstaja";
-  } else {
-    emailError.innerText = "";
-  }
-});
-
 document.getElementById("loginForm")?.addEventListener("submit", (e) => {
   e.preventDefault();
   login(e);
 });
-
-document.getElementById("goRegister")?.addEventListener("click", showRegister);
-document.getElementById("goLogin")?.addEventListener("click", showLogin);
-
-document.getElementById("regStep1Btn")?.addEventListener("click", registerStep1);
-document.getElementById("regStep2Btn")?.addEventListener("click", registerStep2);
 
 document.getElementById("addWorkBtn")?.addEventListener("click", addWork);
 document.getElementById("headerLogout")?.addEventListener("click", logout);

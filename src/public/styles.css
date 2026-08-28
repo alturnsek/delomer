@@ -163,33 +163,22 @@ input:focus {
   outline: none;
 }
 
-select {
+select,
+textarea {
   width: 100%;
   padding: 12px;
   margin: 8px 0;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 14px;
+  font-family: inherit;
 }
 
-.org-mode {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 12px 0;
-  font-size: 14px;
-}
-
-.org-mode label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.org-mode input[type="radio"] {
-  width: auto;
-  margin: 0;
+code {
+  background: #f1f5f9;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 
@@ -352,12 +341,16 @@ button:hover {
 /* =========================
   WORK LIST
 ========================= */
-#workList {
+#workList,
+#orgList,
+#orgMembersList {
   list-style: none;
   padding: 0;
 }
 
-#workList li {
+#workList li,
+#orgList li,
+#orgMembersList li {
   background: white;
   padding: 15px;
   margin-bottom: 10px;

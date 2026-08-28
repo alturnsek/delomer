@@ -51,51 +51,6 @@
       Nadaljuj z Google
     </a>
     -->
-
-    <p class="switch">
-      Nimaš računa?
-      <span id="goRegister">Registriraj se</span>
-    </p>
-  </div>
-
-
-  <!-- REGISTER STEP 1 -->
-  <div id="register-step1" class="box">
-    <h2>Registracija</h2>
-
-    
-    <input id="reg-email" type="email" placeholder="Email">
-    <div id="emailError" style="color:red; font-size:12px;"></div>
-
-    <input id="reg-password" type="password" placeholder="Geslo">
-    <div id="passwordError" style="color:red; font-size:12px;"></div>
-
-    <button id="regStep1Btn">Naprej</button>
-
-    <p class="switch">
-      Že imaš račun?
-      <span id="goLogin">Nazaj na prijavo</span>
-    </p>
-  </div>
-
-
-  <!-- REGISTER STEP 2 -->
-  <div id="register-step2" class="box">
-    <h2>Še malo...</h2>
-
-    <input id="first_name" placeholder="Ime">
-    <input id="last_name" placeholder="Priimek">
-
-    <div class="org-mode">
-      <label><input type="radio" name="orgMode" id="orgModeCreate" checked> Ustvari novo društvo</label>
-      <label><input type="radio" name="orgMode" id="orgModeJoin"> Pridruži se obstoječemu</label>
-    </div>
-
-    <input id="org-name" placeholder="Ime društva">
-    <select id="org-select" class="hidden"></select>
-    <div id="orgError" class="error"></div>
-
-    <button id="regStep2Btn">Zaključi registracijo</button>
   </div>
 
 </div>
@@ -104,9 +59,48 @@
 <!--APP -->
 <div id="app" class="hidden">
 
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <h2>Vnos dela</h2>
+  <!-- SUPER ADMIN: DRUŠTVA -->
+  <div id="superadminSection" class="hidden">
+    <h2>Društva</h2>
+
+    <div class="work-form">
+      <input id="newOrgName" placeholder="Ime društva">
+      <input id="newOrgAdminFirst" placeholder="Ime admina">
+      <input id="newOrgAdminLast" placeholder="Priimek admina">
+      <input id="newOrgAdminEmail" type="email" placeholder="Email admina">
+      <button id="createOrgBtn">Ustvari društvo</button>
+      <div id="createOrgMsg" class="error"></div>
+    </div>
+
+    <ul id="orgList"></ul>
   </div>
+
+  <!-- ADMIN: ČLANI DRUŠTVA -->
+  <div id="adminSection" class="hidden">
+    <h2>Društvo — člani</h2>
+
+    <div class="work-form">
+      <input id="inviteFirst" placeholder="Ime">
+      <input id="inviteLast" placeholder="Priimek">
+      <input id="inviteEmail" type="email" placeholder="Email">
+      <button id="inviteUserBtn">Povabi člana</button>
+      <div id="inviteMsg" class="error"></div>
+    </div>
+
+    <div class="work-form">
+      <label>Bulk uvoz — ena vrstica na osebo: <code>Ime,Priimek,Email</code></label>
+      <textarea id="bulkInviteText" rows="5" placeholder="Janez,Novak,janez@primer.si"></textarea>
+      <button id="bulkInviteBtn">Povabi vse</button>
+      <div id="bulkInviteMsg" class="error"></div>
+    </div>
+
+    <ul id="orgMembersList"></ul>
+  </div>
+
+  <div id="workSection">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Vnos dela</h2>
+    </div>
 
 
     <div class="work-form">
@@ -129,7 +123,8 @@
     </div>
 
 
-  <ul id="workList"></ul>
+    <ul id="workList"></ul>
+  </div>
 
 </div>
 <div id="confirmModal" class="hidden">

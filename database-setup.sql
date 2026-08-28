@@ -6,10 +6,11 @@
 --   src/config/db.js, src/config/passport.js,
 --   src/routes/users.js, src/routes/work.js
 --
--- MVP funkcionalnost: registracija (z ustvarjanjem/pridružitvijo društvu),
--- prijava (local + Google), vpis dela.
--- (Approval workflow za work_logs (DRAFT/PENDING/APPROVED) je predvideno za
--- kasnejšo fazo razvoja, ko bo koda dejansko uporabljala ta model.)
+-- MVP funkcionalnost: SUPER_ADMIN ustvarja društva, ADMIN društva vabi
+-- člane (email + nastavitev gesla preko povezave), prijava (local + Google),
+-- vpis dela.
+-- (Approval workflow za work_logs (DRAFT/PENDING/APPROVED), kategorije dela
+-- in skupinski vnosi so predvideni za kasnejšo fazo razvoja.)
 --
 -- ---------------------------------------------------------
 -- KAKO UPORABITI TO DATOTEKO
@@ -50,12 +51,15 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NULL, -- društvo, kateremu uporabnik pripada
-  role ENUM('ADMIN','MEMBER') NOT NULL DEFAULT 'MEMBER',
+  role ENUM('SUPER_ADMIN','ADMIN','MEMBER') NOT NULL DEFAULT 'MEMBER',
   email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL DEFAULT '', -- prazno za social login (Google)
+  password_hash VARCHAR(255) NOT NULL DEFAULT '', -- prazno = račun čaka na nastavitev gesla (vabilo) ali social login
   first_name VARCHAR(100) NOT NULL DEFAULT '',
   last_name VARCHAR(100) NOT NULL DEFAULT '',
+  invite_token VARCHAR(255) NULL,
+  invite_token_expires_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_users_invite_token (invite_token),
   CONSTRAINT fk_users_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

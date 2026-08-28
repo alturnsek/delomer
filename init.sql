@@ -7,12 +7,15 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NULL,
-  role ENUM('ADMIN','MEMBER') NOT NULL DEFAULT 'MEMBER',
+  role ENUM('SUPER_ADMIN','ADMIN','MEMBER') NOT NULL DEFAULT 'MEMBER',
   email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL DEFAULT '',
+  password_hash VARCHAR(255) NOT NULL DEFAULT '', -- prazno = račun še ni aktiviran (čaka na nastavitev gesla) ali social login
   first_name VARCHAR(100) NOT NULL DEFAULT '',
   last_name VARCHAR(100) NOT NULL DEFAULT '',
+  invite_token VARCHAR(255) NULL,
+  invite_token_expires_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_users_invite_token (invite_token),
   CONSTRAINT fk_users_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL
 );
 

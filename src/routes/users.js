@@ -41,165 +41,99 @@ router.post("/login", (req, res, next) => {
 
 
 /* =========================
-  ORGANIZACIJE (seznam za register step2 - pridružitev obstoječemu)
+  VABILO (invite) - preveri token
 ========================= */
-router.get("/organizations", async (req, res) => {
+router.get("/invite/:token", async (req, res) => {
   try {
     const rows = await db.query(
-      "SELECT id, name FROM organizations ORDER BY name ASC"
+      `SELECT users.email, users.first_name, users.last_name, users.invite_token_expires_at,
+              organizations.name AS organization_name
+       FROM users
+       LEFT JOIN organizations ON organizations.id = users.organization_id
+       WHERE users.invite_token = ?`,
+      [req.params.token]
     );
 
-    res.json(rows);
+    const invite = rows[0];
+
+    if (!invite) {
+      return res.status(404).json({ message: "Povabilo ne obstaja" });
+    }
+
+    if (new Date(invite.invite_token_expires_at) < new Date()) {
+      return res.status(400).json({ message: "Povabilo je poteklo" });
+    }
+
+    res.json({
+      email: invite.email,
+      first_name: invite.first_name,
+      last_name: invite.last_name,
+      organization_name: invite.organization_name
+    });
   } catch (err) {
-    console.error("LIST ORGANIZATIONS ERROR:", err);
+    console.error("GET INVITE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 
 /* =========================
-  REGISTER STEP 1
+  VABILO (invite) - nastavi geslo in aktiviraj račun
 ========================= */
-router.post("/register/step1", async (req, res) => {
+router.post("/invite/:token/activate", async (req, res) => {
   try {
-    let { email, password } = req.body;
+    const { password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Manjkajo podatki" });
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: "Geslo mora imeti vsaj 6 znakov" });
     }
 
-    email = email.trim().toLowerCase();
-
-    const rows = await db.query(
-      "SELECT id FROM users WHERE email = ?",
-      [email]
-    );
-
-    if (rows.length > 0) {
-      return res.status(400).json({ message: "Email že obstaja" });
-    }
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    req.session.tmpUser = {
-      email,
-      password_hash
-    };
-
-    res.json({ message: "OK" });
-
-  } catch (err) {
-    console.error("STEP1 ERROR:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-/* =========================
-  REGISTER STEP 2
-========================= */
-router.post("/register/step2", async (req, res) => {
-  try {
-    const { first_name, last_name, org_mode, org_name, organization_id } = req.body;
-
-    if (!first_name || !last_name) {
-      return res.status(400).json({ message: "Manjkajo podatki" });
-    }
-
-    if (!req.session.tmpUser) {
-      return res.status(400).json({ message: "Session expired" });
-    }
-
-    if (org_mode !== "create" && org_mode !== "join") {
-      return res.status(400).json({ message: "Izberi društvo" });
-    }
-
-    let resolvedOrgId;
-    let role;
-
-    if (org_mode === "create") {
-      const name = (org_name || "").trim();
-
-      if (!name) {
-        return res.status(400).json({ message: "Vnesi ime društva" });
-      }
-
-      const orgResult = await db.query(
-        "INSERT INTO organizations (name) VALUES (?)",
-        [name]
-      );
-
-      resolvedOrgId = orgResult.insertId;
-      role = "ADMIN";
-    } else {
-      const orgId = Number(organization_id);
-
-      if (!orgId) {
-        return res.status(400).json({ message: "Izberi društvo" });
-      }
-
-      const orgRows = await db.query(
-        "SELECT id FROM organizations WHERE id = ?",
-        [orgId]
-      );
-
-      if (!orgRows.length) {
-        return res.status(400).json({ message: "Društvo ne obstaja" });
-      }
-
-      resolvedOrgId = orgId;
-      role = "MEMBER";
-    }
-
-    const { email, password_hash } = req.session.tmpUser;
-
-    // ✅ INSERT
-    const insertResult = await db.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name, organization_id, role)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [email, password_hash, first_name, last_name, resolvedOrgId, role]
-    );
-
-    const insertId = insertResult.insertId;
-
-    //GET USER (z imenom društva)
     const rows = await db.query(
       `SELECT users.*, organizations.name AS organization_name
        FROM users
        LEFT JOIN organizations ON organizations.id = users.organization_id
-       WHERE users.id = ?`,
-      [insertId]
+       WHERE users.invite_token = ?`,
+      [req.params.token]
     );
 
     const user = rows[0];
 
     if (!user) {
-      return res.status(500).json({ message: "User fetch failed" });
+      return res.status(404).json({ message: "Povabilo ne obstaja" });
     }
 
-    //LOGIN
+    if (new Date(user.invite_token_expires_at) < new Date()) {
+      return res.status(400).json({ message: "Povabilo je poteklo" });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+
+    await db.query(
+      `UPDATE users
+       SET password_hash = ?, invite_token = NULL, invite_token_expires_at = NULL
+       WHERE id = ?`,
+      [password_hash, user.id]
+    );
+
+    user.password_hash = password_hash;
+
     req.login(user, (err) => {
       if (err) {
         console.error("LOGIN ERROR:", err);
         return res.status(500).json({ message: "Login error" });
       }
 
-      //cleanup
-      req.session.tmpUser = null;
-
-      //session commit
       req.session.save((err) => {
         if (err) {
           console.error("SESSION SAVE ERROR:", err);
           return res.status(500).json({ message: "Session save error" });
         }
 
-        res.json({ message: "Registered", user: toPublicUser(user) });
+        res.json({ message: "Account activated", user: toPublicUser(user) });
       });
     });
-
   } catch (err) {
-    console.error("STEP2 ERROR:", err);
+    console.error("ACTIVATE INVITE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -249,33 +183,6 @@ router.post("/logout", (req, res) => {
       res.json({ message: "Logged out" });
     });
   });
-});
-
-
-/* =========================
-  CHECK EMAIL
-========================= */
-router.post("/check-email", async (req, res) => {
-  try {
-    let { email } = req.body;
-
-    if (!email) {
-      return res.json({ exists: false });
-    }
-
-    email = email.trim().toLowerCase();
-
-    const rows = await db.query(
-      "SELECT id FROM users WHERE email = ?",
-      [email]
-    );
-
-    res.json({ exists: rows.length > 0 });
-
-  } catch (err) {
-    console.error("CHECK EMAIL ERROR:", err);
-    res.status(500).json({ exists: false });
-  }
 });
 
 

@@ -11,6 +11,8 @@ require("dotenv").config();
 // routes
 const users = require("./routes/users");
 const work = require("./routes/work");
+const admin = require("./routes/admin");
+const superadmin = require("./routes/superadmin");
 
 //passport config
 require("./config/passport");
@@ -91,6 +93,8 @@ app.use(express.static(path.join(__dirname, "public")));
 ========================= */
 app.use("/api/users", users);
 app.use("/api/work", work);
+app.use("/api/admin", admin);
+app.use("/api/superadmin", superadmin);
 app.get("/profile", (req, res) => {
 res.sendFile(path.join(__dirname, "public", "profile.html"));
 });

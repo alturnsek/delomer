@@ -1,17 +1,8 @@
 const express = require('express');
 const pool = require('../config/db');
+const { requireAuth } = require('../middleware/roles');
 
 const router = express.Router();
-
-/* =========================
-  SESSION AUTH MIDDLEWARE
-========================= */
-function requireAuth(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  next();
-}
 
 //uporabi za vse route
 router.use(requireAuth);

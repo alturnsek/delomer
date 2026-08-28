@@ -57,9 +57,9 @@ passport.use(new LocalStrategy(
 
       const user = rows[0];
 
-      // social accounti nimajo passworda
+      // prazen password_hash = račun še ni aktiviran (čaka na vabilo) ali social login
       if (!user.password_hash) {
-        return done(null, false, { message: "Uporabi social login" });
+        return done(null, false, { message: "Račun še ni aktiviran - preveri povabilo po emailu" });
       }
 
       const match = await bcrypt.compare(password, user.password_hash);
