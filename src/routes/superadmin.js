@@ -76,4 +76,53 @@ router.post("/organizations", async (req, res) => {
   }
 });
 
+/* =========================
+  ČLANI DOLOČENEGA DRUŠTVA (za upravljanje adminov)
+========================= */
+router.get("/organizations/:id/users", async (req, res) => {
+  try {
+    const rows = await db.query(
+      `SELECT id, first_name, last_name, email, role,
+              (password_hash != '') AS activated
+       FROM users
+       WHERE organization_id = ?
+       ORDER BY role ASC, last_name ASC, first_name ASC`,
+      [req.params.id]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("LIST ORG USERS (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  SPREMENI VLOGO ČLANA V DRUŠTVU (ADMIN / SUPERINTENDENT / MEMBER)
+========================= */
+router.post("/organizations/:id/users/:userId/role", async (req, res) => {
+  try {
+    const { role } = req.body;
+    const allowedRoles = ["ADMIN", "SUPERINTENDENT", "MEMBER"];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: "Neveljavna vloga" });
+    }
+
+    const result = await db.query(
+      "UPDATE users SET role = ? WHERE id = ? AND organization_id = ?",
+      [role, req.params.userId, req.params.id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    res.json({ message: "Vloga posodobljena" });
+  } catch (err) {
+    console.error("CHANGE ROLE (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

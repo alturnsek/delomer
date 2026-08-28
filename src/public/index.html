@@ -6,150 +6,199 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="loading">
-  
+
 <header class="main-header">
+  <button id="burgerBtn" class="burger-btn hidden" aria-label="Meni">☰</button>
+
   <div class="logo">
-    <a href="/"><img class="logo" src="logo.png" alt="Delomer" title="Delomer logo"></a> 
-  </div>
-  
-  <div class="header-right">
-    <div class="inline">
-      <span id="headerUser">Pozdravljen, uporabnik</span>      
-    </div>
-  <button id="headerLogout">Odjava</button>
+    <a href="/"><img class="logo" src="logo.png" alt="Delomer" title="Delomer logo"></a>
   </div>
 
+  <div class="header-right">
+    <div class="inline">
+      <span id="headerUser">Pozdravljen, uporabnik</span>
+    </div>
+    <button id="headerLogout">Odjava</button>
+  </div>
 </header>
 
 
 <div id="loader">
   <div class="spinner"></div>
 </div>
+
 <main class="main-content">
-<div class="container">
 
-  <!-- LOGIN -->
+  <div class="container">
+    <div id="login-box" class="box active">
+      <h2>Prijava</h2>
 
-<div id="login-box" class="box active">
-  <h2>Prijava</h2>
+      <form id="loginForm">
+        <input id="login-email" type="email" placeholder="Email">
+        <div id="loginEmailError" class="error"></div>
+        <input id="login-password" type="password" placeholder="Geslo">
+        <div id="loginPasswordError" class="error"></div>
 
-  <form id="loginForm">
-    <input id="login-email" type="email" placeholder="Email">
-    <div id="loginEmailError" class="error"></div>
-    <input id="login-password" type="password" placeholder="Geslo">
-    <div id="loginPasswordError" class="error"></div>
+        <div id="loginGeneralError" class="error"></div>
 
-    <div id="loginGeneralError" class="error"></div>
+        <button type="submit" id="loginBtn">Prijava</button>
+      </form>
 
-    <button type="submit" id="loginBtn">Prijava</button>
-  </form>
-
-
-    <!-- Google login začasno skrit
-    <div class="separator">ali</div>
-    <a href="/api/users/auth/google" class="social">
-      Nadaljuj z Google
-    </a>
-    -->
+      <!-- Google login začasno skrit
+      <div class="separator">ali</div>
+      <a href="/api/users/auth/google" class="social">
+        Nadaljuj z Google
+      </a>
+      -->
+    </div>
   </div>
 
-</div>
+  <div id="appLayout" class="hidden app-layout">
+    <nav id="sidebar" class="sidebar hidden">
+      <a href="#" class="nav-link" data-view="work" data-roles="ADMIN,SUPERINTENDENT,MEMBER">Vnos dela</a>
+      <a href="#" class="nav-link" data-view="members" data-roles="ADMIN">Člani</a>
+      <a href="#" class="nav-link" data-view="categories" data-roles="ADMIN,SUPERINTENDENT">Kategorije</a>
+      <a href="#" class="nav-link" data-view="approvals" data-roles="ADMIN,SUPERINTENDENT">Potrjevanje dela</a>
+      <a href="#" class="nav-link" data-view="org-stats" data-roles="ADMIN,SUPERINTENDENT">Statistika društva</a>
+      <a href="#" class="nav-link" data-view="organizations" data-roles="SUPER_ADMIN">Društva</a>
+      <a href="#" class="nav-link" data-view="org-admins" data-roles="SUPER_ADMIN">Admini društev</a>
+      <a href="#" class="nav-link" data-view="platform-stats" data-roles="SUPER_ADMIN">Statistika društev</a>
+      <a href="#" class="nav-link" data-view="profile" data-roles="ADMIN,SUPERINTENDENT,MEMBER,SUPER_ADMIN">Moj profil</a>
+    </nav>
 
+    <div id="content" class="content">
 
-<!--APP -->
-<div id="app" class="hidden">
+      <!-- VNOS DELA -->
+      <section id="view-work" class="view">
+        <h2>Vnos dela</h2>
 
-  <!-- SUPER ADMIN: DRUŠTVA -->
-  <div id="superadminSection" class="hidden">
-    <h2>Društva</h2>
+        <div class="work-form">
+          <div class="field">
+            <input id="task" placeholder="Kaj si delal?" maxlength="255" rows="3">
+            <div id="taskCount">0 / 255</div>
+          </div>
 
-    <div class="work-form">
-      <input id="newOrgName" placeholder="Ime društva">
-      <input id="newOrgAdminFirst" placeholder="Ime admina">
-      <input id="newOrgAdminLast" placeholder="Priimek admina">
-      <input id="newOrgAdminEmail" type="email" placeholder="Email admina">
-      <button id="createOrgBtn">Ustvari društvo</button>
-      <div id="createOrgMsg" class="error"></div>
+          <div class="field">
+            <label>Začetek dela</label>
+            <input id="start" type="datetime-local">
+          </div>
+
+          <div class="field">
+            <label>Konec dela</label>
+            <input id="end" type="datetime-local">
+          </div>
+
+          <div class="field">
+            <label>Kategorija</label>
+            <select id="workCategory"><option value="">Brez kategorije</option></select>
+          </div>
+
+          <div class="field">
+            <label>Sodelavci (opravljali delo skupaj)</label>
+            <div id="participantCheckboxes" class="checkbox-list"></div>
+          </div>
+
+          <button id="addWorkBtn">+ Dodaj</button>
+        </div>
+
+        <ul id="workList"></ul>
+      </section>
+
+      <!-- ADMIN: ČLANI DRUŠTVA -->
+      <section id="view-members" class="view hidden">
+        <h2>Društvo — člani</h2>
+
+        <div class="work-form">
+          <input id="inviteFirst" placeholder="Ime">
+          <input id="inviteLast" placeholder="Priimek">
+          <input id="inviteEmail" type="email" placeholder="Email">
+          <button id="inviteUserBtn">Povabi člana</button>
+          <div id="inviteMsg" class="error"></div>
+        </div>
+
+        <div class="work-form">
+          <label>Bulk uvoz — ena vrstica na osebo: <code>Ime,Priimek,Email</code></label>
+          <textarea id="bulkInviteText" rows="5" placeholder="Janez,Novak,janez@primer.si"></textarea>
+          <button id="bulkInviteBtn">Povabi vse</button>
+          <div id="bulkInviteMsg" class="error"></div>
+        </div>
+
+        <ul id="orgMembersList"></ul>
+      </section>
+
+      <!-- KATEGORIJE DELA -->
+      <section id="view-categories" class="view hidden">
+        <h2>Kategorije dela</h2>
+
+        <div class="work-form">
+          <div class="row">
+            <input id="newCategoryName" placeholder="Ime kategorije">
+            <button id="addCategoryBtn">Dodaj</button>
+          </div>
+          <div id="categoryMsg" class="error"></div>
+        </div>
+
+        <ul id="categoryList"></ul>
+      </section>
+
+      <!-- POTRJEVANJE DELA -->
+      <section id="view-approvals" class="view hidden">
+        <h2>Potrjevanje dela</h2>
+
+        <ul id="adminWorkList"></ul>
+      </section>
+
+      <!-- STATISTIKA DRUŠTVA (placeholder) -->
+      <section id="view-org-stats" class="view hidden">
+        <h2>Statistika društva</h2>
+        <p class="placeholder-note">Statistika društva bo na voljo kmalu.</p>
+      </section>
+
+      <!-- SUPER ADMIN: DRUŠTVA -->
+      <section id="view-organizations" class="view hidden">
+        <h2>Društva</h2>
+
+        <div class="work-form">
+          <input id="newOrgName" placeholder="Ime društva">
+          <input id="newOrgAdminFirst" placeholder="Ime admina">
+          <input id="newOrgAdminLast" placeholder="Priimek admina">
+          <input id="newOrgAdminEmail" type="email" placeholder="Email admina">
+          <button id="createOrgBtn">Ustvari društvo</button>
+          <div id="createOrgMsg" class="error"></div>
+        </div>
+
+        <ul id="orgList"></ul>
+      </section>
+
+      <!-- SUPER ADMIN: ADMINI DRUŠTEV -->
+      <section id="view-org-admins" class="view hidden">
+        <h2>Admini društev</h2>
+
+        <div class="field">
+          <label>Izberi društvo</label>
+          <select id="orgAdminsSelect"></select>
+        </div>
+
+        <ul id="orgAdminsList"></ul>
+      </section>
+
+      <!-- SUPER ADMIN: STATISTIKA DRUŠTEV (placeholder) -->
+      <section id="view-platform-stats" class="view hidden">
+        <h2>Statistika društev</h2>
+        <p class="placeholder-note">Statistika društev bo na voljo kmalu.</p>
+      </section>
+
+      <!-- MOJ PROFIL (placeholder) -->
+      <section id="view-profile" class="view hidden">
+        <h2>Moj profil</h2>
+        <p class="placeholder-note">Osebna statistika skozi čas bo na voljo kmalu.</p>
+      </section>
+
     </div>
-
-    <ul id="orgList"></ul>
   </div>
 
-  <!-- ADMIN: ČLANI DRUŠTVA -->
-  <div id="adminSection" class="hidden">
-    <h2>Društvo — člani</h2>
+</main>
 
-    <div class="work-form">
-      <input id="inviteFirst" placeholder="Ime">
-      <input id="inviteLast" placeholder="Priimek">
-      <input id="inviteEmail" type="email" placeholder="Email">
-      <button id="inviteUserBtn">Povabi člana</button>
-      <div id="inviteMsg" class="error"></div>
-    </div>
-
-    <div class="work-form">
-      <label>Bulk uvoz — ena vrstica na osebo: <code>Ime,Priimek,Email</code></label>
-      <textarea id="bulkInviteText" rows="5" placeholder="Janez,Novak,janez@primer.si"></textarea>
-      <button id="bulkInviteBtn">Povabi vse</button>
-      <div id="bulkInviteMsg" class="error"></div>
-    </div>
-
-    <ul id="orgMembersList"></ul>
-
-    <h2>Kategorije dela</h2>
-    <div class="work-form">
-      <div class="row">
-        <input id="newCategoryName" placeholder="Ime kategorije">
-        <button id="addCategoryBtn">Dodaj</button>
-      </div>
-      <div id="categoryMsg" class="error"></div>
-    </div>
-    <ul id="categoryList"></ul>
-
-    <h2>Delo v društvu</h2>
-    <ul id="adminWorkList"></ul>
-  </div>
-
-  <div id="workSection">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2>Vnos dela</h2>
-    </div>
-
-
-    <div class="work-form">
-      <div class="field">
-        <input id="task" placeholder="Kaj si delal?" maxlength="255" rows="3">
-        <div id="taskCount">0 / 255</div>
-      </div>
-
-      <div class="field">
-        <label>Začetek dela</label>
-        <input id="start" type="datetime-local">
-      </div>
-
-      <div class="field">
-        <label>Konec dela</label>
-        <input id="end" type="datetime-local">
-      </div>
-
-      <div class="field">
-        <label>Kategorija</label>
-        <select id="workCategory"><option value="">Brez kategorije</option></select>
-      </div>
-
-      <div class="field">
-        <label>Sodelavci (opravljali delo skupaj)</label>
-        <div id="participantCheckboxes" class="checkbox-list"></div>
-      </div>
-
-      <button id="addWorkBtn">+ Dodaj</button>
-    </div>
-
-
-    <ul id="workList"></ul>
-  </div>
-
-</div>
 <div id="confirmModal" class="hidden">
   <div class="confirm-box">
     <p>Ali res želiš izbrisati vnos?</p>
@@ -159,7 +208,7 @@
     </div>
   </div>
 </div>
-</main>
+
 <footer class="main-footer">
   <p>© 2026 Delomer — CI/CD test v1</p>
   <p>Kontakt: aleksander.turnsek@student.um.si</p>

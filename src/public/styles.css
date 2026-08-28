@@ -117,7 +117,7 @@ body {
   min-height: 100vh;
 }
 
-#app,
+#appLayout,
 .container {
   flex: 1;
 }
@@ -304,11 +304,74 @@ button:hover {
 }
 
 /* =========================
-  APP DASHBOARD
+  APP DASHBOARD (sidebar + vsebina)
 ========================= */
-#app {
-  max-width: 700px;
-  margin: 40px auto;
+.app-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.burger-btn {
+  position: absolute;
+  left: 20px;
+  width: auto;
+  padding: 6px 12px;
+  font-size: 20px;
+  line-height: 1;
+  background: white;
+  color: #1a1a1a;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.burger-btn:hover {
+  background: #f1f5f9;
+}
+
+.sidebar {
+  flex-shrink: 0;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.nav-link {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  background: #f1f5f9;
+}
+
+.nav-link.active {
+  background: #4f46e5;
+  color: white;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.placeholder-note {
+  color: #777;
+  font-size: 14px;
 }
 
 /* =========================
@@ -380,14 +443,20 @@ button:hover {
 ========================= */
 #workList,
 #orgList,
-#orgMembersList {
+#orgMembersList,
+#categoryList,
+#adminWorkList,
+#orgAdminsList {
   list-style: none;
   padding: 0;
 }
 
 #workList li,
 #orgList li,
-#orgMembersList li {
+#orgMembersList li,
+#categoryList li,
+#adminWorkList li,
+#orgAdminsList li {
   background: white;
   padding: 15px;
   margin-bottom: 10px;
@@ -409,7 +478,7 @@ button:hover {
   LOADING STATE
 ========================= */
 body.loading .container,
-body.loading #app {
+body.loading #appLayout {
   display: none;
 }
 
@@ -463,6 +532,11 @@ body:not(.loading) #loader {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.actions select {
+  width: auto;
+  margin: 0;
 }
 
 .actions strong {

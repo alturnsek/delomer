@@ -6,13 +6,17 @@ const { serializeRow, attachParticipants } = require("../utils/workLogs");
 
 const router = express.Router();
 
-// vse route v tem routerju so samo za ADMIN-a lastnega društva
-router.use(requireRole("ADMIN"));
+// ADMIN in SUPERINTENDENT imata enake operativne pravice (delo, kategorije,
+// potrjevanje); upravljanje uporabnikov je omejeno samo na ADMIN-a spodaj.
+const canManageWork = requireRole("ADMIN", "SUPERINTENDENT");
+const canManageUsers = requireRole("ADMIN");
+
+router.use(canManageWork);
 
 /* =========================
   ČLANI DRUŠTVA
 ========================= */
-router.get("/users", async (req, res) => {
+router.get("/users", canManageUsers, async (req, res) => {
   try {
     const rows = await db.query(
       `SELECT id, first_name, last_name, email, role,
@@ -61,7 +65,7 @@ async function inviteOne(organizationId, entry) {
 /* =========================
   POVABI ENEGA ČLANA
 ========================= */
-router.post("/users", async (req, res) => {
+router.post("/users", canManageUsers, async (req, res) => {
   try {
     const result = await inviteOne(req.user.organization_id, req.body);
 
@@ -79,7 +83,7 @@ router.post("/users", async (req, res) => {
 /* =========================
   POVABI VEČ ČLANOV NAENKRAT
 ========================= */
-router.post("/users/bulk", async (req, res) => {
+router.post("/users/bulk", canManageUsers, async (req, res) => {
   try {
     const { users } = req.body;
 
@@ -96,6 +100,81 @@ router.post("/users/bulk", async (req, res) => {
     res.json({ results });
   } catch (err) {
     console.error("BULK INVITE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  UREDI PODATKE ČLANA
+========================= */
+router.put("/users/:id", canManageUsers, async (req, res) => {
+  try {
+    const { first_name, last_name, email } = req.body;
+
+    if (!first_name || !last_name || !email) {
+      return res.status(400).json({ message: "Manjkajo podatki" });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const rows = await db.query(
+      "SELECT id FROM users WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    const emailTaken = await db.query(
+      "SELECT id FROM users WHERE email = ? AND id != ?",
+      [cleanEmail, req.params.id]
+    );
+
+    if (emailTaken.length) {
+      return res.status(400).json({ message: "Email je že uporabljen" });
+    }
+
+    await db.query(
+      "UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE id = ?",
+      [first_name.trim(), last_name.trim(), cleanEmail, req.params.id]
+    );
+
+    res.json({ message: "Posodobljeno" });
+  } catch (err) {
+    console.error("EDIT USER ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  SPREMENI VLOGO ČLANA (ADMIN / SUPERINTENDENT / MEMBER)
+========================= */
+router.post("/users/:id/role", canManageUsers, async (req, res) => {
+  try {
+    const { role } = req.body;
+    const allowedRoles = ["ADMIN", "SUPERINTENDENT", "MEMBER"];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: "Neveljavna vloga" });
+    }
+
+    if (Number(req.params.id) === req.user.id) {
+      return res.status(400).json({ message: "Svoje vloge ne moreš spremeniti" });
+    }
+
+    const result = await db.query(
+      "UPDATE users SET role = ? WHERE id = ? AND organization_id = ?",
+      [role, req.params.id, req.user.organization_id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    res.json({ message: "Vloga posodobljena" });
+  } catch (err) {
+    console.error("CHANGE ROLE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

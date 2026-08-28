@@ -1,5 +1,6 @@
 const authDiv = document.querySelector(".container");
-const appDiv = document.getElementById("app");
+const appLayout = document.getElementById("appLayout");
+const sidebar = document.getElementById("sidebar");
 
 const taskInput = document.getElementById("task");
 const taskCount = document.getElementById("taskCount");
@@ -7,6 +8,49 @@ const taskCount = document.getElementById("taskCount");
 let workToDelete = null;
 let editingWorkId = null;
 let currentUserId = null;
+let currentUserRole = null;
+
+/* =========================
+  VIEW ROUTING (sidebar meni)
+========================= */
+const VIEW_LOADERS = {
+  work: () => { loadCategories(); loadParticipantOptions(); loadWork(); },
+  members: () => loadOrgMembers(),
+  categories: () => loadCategories(),
+  approvals: () => loadAdminWork(),
+  "org-stats": () => {},
+  organizations: () => loadOrganizationsSuperadmin(),
+  "org-admins": () => loadOrgAdminsOrgOptions(),
+  "platform-stats": () => {},
+  profile: () => {}
+};
+
+function showView(viewName) {
+  document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
+  document.querySelectorAll(".nav-link").forEach(a => a.classList.remove("active"));
+
+  const section = document.getElementById(`view-${viewName}`);
+  const link = document.querySelector(`.nav-link[data-view="${viewName}"]`);
+
+  if (section) section.classList.remove("hidden");
+  if (link) link.classList.add("active");
+
+  if (VIEW_LOADERS[viewName]) VIEW_LOADERS[viewName]();
+
+  sidebar.classList.add("hidden");
+}
+
+document.querySelectorAll(".nav-link").forEach(link => {
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    showView(link.dataset.view);
+  });
+});
+
+document.getElementById("burgerBtn")?.addEventListener("click", () => {
+  sidebar.classList.toggle("hidden");
+});
+
 
 /* =========================
   AUTH CHECK
@@ -32,31 +76,30 @@ async function checkAuth() {
 
     if (data.loggedIn && data.user) {
       authDiv.classList.add("hidden");
-      appDiv.classList.remove("hidden");
+      appLayout.classList.remove("hidden");
+      document.getElementById("burgerBtn").classList.remove("hidden");
       document.querySelector(".header-right").style.display = "flex";
 
-      const role = data.user.role;
       currentUserId = data.user.id;
+      currentUserRole = data.user.role;
 
-      document.getElementById("superadminSection").classList.toggle("hidden", role !== "SUPER_ADMIN");
-      document.getElementById("adminSection").classList.toggle("hidden", role !== "ADMIN");
-      document.getElementById("workSection").classList.toggle("hidden", role === "SUPER_ADMIN");
+      let firstVisible = null;
 
-      if (role === "SUPER_ADMIN") {
-        loadOrganizationsSuperadmin();
-      } else {
-        loadCategories();
-        loadParticipantOptions();
-        loadWork();
+      document.querySelectorAll(".nav-link").forEach(link => {
+        const allowedRoles = link.dataset.roles.split(",");
+        const visible = allowedRoles.includes(currentUserRole);
 
-        if (role === "ADMIN") {
-          loadOrgMembers();
-          loadAdminWork();
-        }
-      }
+        link.classList.toggle("hidden", !visible);
+
+        if (visible && !firstVisible) firstVisible = link.dataset.view;
+      });
+
+      if (firstVisible) showView(firstVisible);
     } else {
       authDiv.classList.remove("hidden");
-      appDiv.classList.add("hidden");
+      appLayout.classList.add("hidden");
+      sidebar.classList.add("hidden");
+      document.getElementById("burgerBtn").classList.add("hidden");
       document.querySelector(".header-right").style.display = "none";
     }
 
@@ -83,7 +126,7 @@ async function login(e) {
   const passwordError = document.getElementById("loginPasswordError");
   const generalError = document.getElementById("loginGeneralError");
 
-  
+
   const emailInput = document.getElementById("login-email");
   const passwordInput = document.getElementById("login-password");
 
@@ -201,6 +244,85 @@ document.getElementById("createOrgBtn")?.addEventListener("click", async () => {
 
 
 /* =========================
+  SUPER ADMIN - ADMINI DRUŠTEV
+========================= */
+async function loadOrgAdminsOrgOptions() {
+  const select = document.getElementById("orgAdminsSelect");
+  if (!select) return;
+
+  const res = await fetch("/api/superadmin/organizations", { credentials: "include" });
+  if (!res.ok) return;
+
+  const orgs = await res.json();
+
+  select.innerHTML = orgs.length
+    ? orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join("")
+    : `<option value="">Ni še nobenega društva</option>`;
+
+  if (orgs.length) loadOrgAdminsUsers(select.value);
+}
+
+document.getElementById("orgAdminsSelect")?.addEventListener("change", (e) => {
+  loadOrgAdminsUsers(e.target.value);
+});
+
+async function loadOrgAdminsUsers(organizationId) {
+  const list = document.getElementById("orgAdminsList");
+  if (!list || !organizationId) {
+    if (list) list.innerHTML = "";
+    return;
+  }
+
+  const res = await fetch(`/api/superadmin/organizations/${organizationId}/users`, { credentials: "include" });
+  if (!res.ok) return;
+
+  const members = await res.json();
+
+  list.innerHTML = members.length
+    ? members.map(m => renderRoleManagedMember(m, `/api/superadmin/organizations/${organizationId}/users`)).join("")
+    : "<li>Ni še članov</li>";
+
+  wireRoleSelects();
+}
+
+function renderRoleManagedMember(m, roleEndpointBase) {
+  return `
+    <li>
+      <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
+      <div class="actions">
+        <select class="roleSelect" data-id="${m.id}" data-endpoint="${roleEndpointBase}">
+          <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
+          <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
+          <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
+        </select>
+      </div>
+    </li>
+  `;
+}
+
+function wireRoleSelects() {
+  document.querySelectorAll(".roleSelect").forEach(select => {
+    select.addEventListener("change", async () => {
+      const id = select.dataset.id;
+      const endpoint = select.dataset.endpoint;
+
+      const res = await fetch(`${endpoint}/${id}/role`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ role: select.value })
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.message || "Napaka pri spremembi vloge");
+      }
+    });
+  });
+}
+
+
+/* =========================
   ADMIN - ČLANI DRUŠTVA
 ========================= */
 async function loadOrgMembers() {
@@ -213,8 +335,63 @@ async function loadOrgMembers() {
   const members = await res.json();
 
   list.innerHTML = members.length
-    ? members.map(m => `<li><span>${m.first_name} ${m.last_name} — ${m.email}</span><span>${m.activated ? "aktiven" : "čaka aktivacijo"}</span></li>`).join("")
+    ? members.map(renderOrgMember).join("")
     : "<li>Ni še članov</li>";
+
+  wireRoleSelects();
+
+  document.querySelectorAll(".editMemberBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const member = members.find(m => m.id == btn.dataset.id);
+      if (!member) return;
+
+      const first_name = prompt("Ime:", member.first_name);
+      if (first_name === null) return;
+
+      const last_name = prompt("Priimek:", member.last_name);
+      if (last_name === null) return;
+
+      const email = prompt("Email:", member.email);
+      if (email === null) return;
+
+      const res = await fetch(`/api/admin/users/${member.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ first_name, last_name, email })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Napaka");
+        return;
+      }
+
+      loadOrgMembers();
+    });
+  });
+}
+
+function renderOrgMember(m) {
+  const isSelf = m.id === currentUserId;
+
+  return `
+    <li>
+      <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
+      <div class="actions">
+        ${isSelf
+          ? `<span class="status-badge">${m.role}</span>`
+          : `<select class="roleSelect" data-id="${m.id}" data-endpoint="/api/admin/users">
+              <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
+              <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
+              <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
+            </select>`
+        }
+        <button class="editMemberBtn" data-id="${m.id}">✏️</button>
+      </div>
+    </li>
+  `;
 }
 
 document.getElementById("inviteUserBtn")?.addEventListener("click", async () => {
@@ -718,7 +895,7 @@ const loginPasswordInput = document.getElementById("login-password");
 const loginEmailError = document.getElementById("loginEmailError");
 const loginPasswordError = document.getElementById("loginPasswordError");
 
-if (loginEmailInput && loginPasswordInput) {  
+if (loginEmailInput && loginPasswordInput) {
   loginEmailInput.addEventListener("input", () => {
     if (loginEmailInput.value.trim() !== "") {
       loginEmailError.innerText = "";
@@ -734,7 +911,7 @@ if (loginEmailInput && loginPasswordInput) {
 }
 
 
-if (loginEmailInput && loginPasswordInput) {  
+if (loginEmailInput && loginPasswordInput) {
 
   loginEmailInput.addEventListener("input", () => {
     const val = loginEmailInput.value.trim();
@@ -762,4 +939,3 @@ if (loginEmailInput && loginPasswordInput) {
   });
 
 }
-

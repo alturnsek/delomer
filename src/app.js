@@ -95,9 +95,6 @@ app.use("/api/users", users);
 app.use("/api/work", work);
 app.use("/api/admin", admin);
 app.use("/api/superadmin", superadmin);
-app.get("/profile", (req, res) => {
-res.sendFile(path.join(__dirname, "public", "profile.html"));
-});
 
 /* =========================
   AUTH CHECK

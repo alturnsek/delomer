@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NULL,
-  role ENUM('SUPER_ADMIN','ADMIN','MEMBER') NOT NULL DEFAULT 'MEMBER',
+  role ENUM('SUPER_ADMIN','ADMIN','SUPERINTENDENT','MEMBER') NOT NULL DEFAULT 'MEMBER',
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL DEFAULT '', -- prazno = račun še ni aktiviran (čaka na nastavitev gesla) ali social login
   first_name VARCHAR(100) NOT NULL DEFAULT '',

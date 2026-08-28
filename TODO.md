@@ -12,13 +12,16 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 ## Arhitekturne odločitve, ki odstopajo od prvotnega Jira načrta
 
 - **Multi-tenancy**: Jira epic KAN-6 (Tenancy & Whitelabel) je predvidel ločeno subdomeno na društvo (`abc.delomer.top`). Namesto tega smo se odločili za **eno domeno + tri nivoje vlog** (glej spodaj) — enostavnejše za trenutno fazo, brez wildcard DNS/TLS kompleksnosti. Subdomene ostajajo možna nadgradnja, če bo produkt zrasel.
-- **Vloge in registracija (POMEMBNO — druga iteracija)**: Prvi poskus (registracija z izbiro "ustvari/pridruži se društvu") je bil **opuščen** v korist invite-only modela s tremi vlogami:
-  - **SUPER_ADMIN** — ustvarja nova društva (ime + prvi admin), edini brez `organization_id`
-  - **ADMIN** (društva) — vabi člane po emailu (posamič ali bulk: `Ime,Priimek,Email` na vrstico), vidi/ureja dela vseh članov društva, potrjuje/zavrača dela, upravlja kategorije dela (Faza 2)
+- **Vloge in registracija (POMEMBNO — druga iteracija)**: Prvi poskus (registracija z izbiro "ustvari/pridruži se društvu") je bil **opuščen** v korist invite-only modela s štirimi vlogami:
+  - **SUPER_ADMIN** — ustvarja nova društva (ime + prvi admin), upravlja admine vseh društev, edini brez `organization_id`
+  - **ADMIN** (društva) — vabi člane po emailu (posamič ali bulk: `Ime,Priimek,Email` na vrstico), popravlja njihove podatke, jim spreminja vlogo (do vključno ADMIN), vidi/ureja dela vseh članov društva, potrjuje/zavrača dela, upravlja kategorije dela
+  - **SUPERINTENDENT** — enake operativne pravice kot ADMIN (delo, kategorije, potrjevanje, statistika društva), **ne more** upravljati uporabnikov (vabiti/urejati/spreminjati vlog). Dodano na zahtevo, da lahko ADMIN nekoga "dvigne na svoj nivo" brez da mu da nadzor nad člani.
   - **MEMBER** — se aktivira preko povezave iz vabila (`set-password.html?token=...`), vnaša svoja dela in ureja tista, ki jih je sam ustvaril
   - Ni več javne registracije. Nov uporabnik nastane samo, ko ga povabi ADMIN/SUPER_ADMIN (vrstica v `users` z `password_hash=''` in `invite_token`); ob aktivaciji nastavi geslo.
   - Email pošiljanje je za zdaj samo stub — povezava za nastavitev gesla se izpiše v strežniške loge (`src/utils/invites.js`), pravo pošiljanje (SMTP/Resend/ipd.) je TODO.
   - Prvi SUPER_ADMIN nastane ročno z SQL (`UPDATE users SET role='SUPER_ADMIN' WHERE email=...`, glej [migrations/002_super_admin_and_invites.sql](migrations/002_super_admin_and_invites.sql)), ne preko kode.
+  - **Pravice so trenutno samo dvo-nivojske sklope** (`requireRole("ADMIN","SUPERINTENDENT")` vs `requireRole("ADMIN")`), ne granularen permission sistem. Eksplicitno dogovorjeno, da se bo to še razširilo, ko bo jasno kdo natančno sme kaj — glej spodaj.
+- **UI**: aplikacija je iz ene monolitne strani prestrukturirana v sidebar/burger meni (`#sidebar`, `.nav-link[data-view]` + `.view` sekcije v [src/public/index.html](src/public/index.html), routing v `showView()` v [src/public/script.js](src/public/script.js)). Nav linki se filtrirajo po `data-roles` glede na vlogo prijavljenega uporabnika.
 - **Deploy target**: Jira (KAN-103, KAN-104) je predvidel Azure + wildcard subdomeno. Trenutno imamo dva neodvisna deploy cilja: Azure VM prek GitHub Actions CI/CD (samo `main`, glej [.github/workflows/deploy.yml](.github/workflows/deploy.yml)) in doma TrueNAS SCALE (Nginx Proxy Manager + Cloudflare, domena `app.delomer.top`) za razvoj/testiranje na `dev` veji.
 - **Auth**: koda trenutno uporablja `express-session` (cookie seja, `passport.session()`), medtem ko je KAN-35/40/41 predvideval JWT (userId/tenantId/role) + httpOnly refresh cookie. `jsonwebtoken` je sicer v odvisnostih, a se še ne uporablja za auth flow — preveriti, ali ostanemo pri sejah ali migriramo na JWT.
 
@@ -39,9 +42,12 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 
 ### Epic: Auth & User (KAN-7)
 - [x] Password login, brez razkrivanja obstoja uporabnika (+ popravljen bug: login/register nista več vračala `password_hash` na frontend)
-- [x] RBAC guards (`src/middleware/roles.js`: `requireAuth`, `requireRole`) — uporabljeno na `/api/admin/*` (ADMIN) in `/api/superadmin/*` (SUPER_ADMIN)
+- [x] RBAC guards (`src/middleware/roles.js`: `requireAuth`, `requireRole`) — `requireRole("ADMIN","SUPERINTENDENT")` na delo/kategorije/potrjevanje, `requireRole("ADMIN")` samo na upravljanje uporabnikov, `requireRole("SUPER_ADMIN")` na `/api/superadmin/*`
 - [x] Admin vabi uporabnike (posamič + bulk), vidi seznam članov z aktivacijskim statusom — `POST/GET /api/admin/users`, `POST /api/admin/users/bulk`
-- [ ] Admin lahko uporabnika tudi deaktivira / mu spremeni vlogo (trenutno samo dodajanje, ni CRUD)
+- [x] Admin ureja podatke člana (ime/priimek/email) — `PUT /api/admin/users/:id`
+- [x] Admin (ne pa SUPERINTENDENT) spreminja vlogo člana do vključno ADMIN — `POST /api/admin/users/:id/role`; SUPER_ADMIN enako za katerokoli društvo — `POST /api/superadmin/organizations/:id/users/:userId/role`
+- [ ] Admin lahko uporabnika tudi deaktivira (samo sprememba vloge/podatkov, ni "onemogoči prijavo")
+- [ ] Granularnejši permission sistem (trenutno samo groba delitev ADMIN/SUPERINTENDENT/MEMBER po routerjih, ne per-akcija)
 
 ### Epic: Work Logs (KAN-8)
 *(brez ločenega DRAFT koraka — vnos gre direktno v PENDING, poenostavljeno glede na dejanske zahteve)*
@@ -79,6 +85,11 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 - [ ] Podatkovni model (MariaDB) — tabele, relacije, statusi in prehodi, indexing
 - [ ] Uporabniški priročnik (member/admin flow)
 - [ ] Deployment dokumentacija (Azure + Docker/TrueNAS, env var seznam)
+
+## Statistika in profil (placeholder strani, brez prave logike)
+
+- [x] "Statistika društva" (ADMIN/SUPERINTENDENT), "Statistika društev" (SUPER_ADMIN), "Moj profil" (vsi) — samo prazne placeholder sekcije v sidebar meniju, brez API-ja ali izračunov
+- [ ] Dejanska statistika (skupaj ur, po obdobjih, grafi) — čaka na to, da bo dovolj podatkov/APPROVED vnosov za smiselno prikazati; `chart.js` je že vključen v `src/public/js/chart.js` za kasnejšo uporabo
 
 ## Kasneje / nice-to-have
 
