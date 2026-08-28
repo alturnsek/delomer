@@ -2,7 +2,7 @@ const express = require("express");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
 const { createInviteToken, logInviteEmail } = require("../utils/invites");
-const { serializeRow, attachParticipants } = require("../utils/workLogs");
+const { serializeRow, attachParticipants, resolveOrgParticipants, saveParticipants } = require("../utils/workLogs");
 
 const router = express.Router();
 
@@ -180,8 +180,24 @@ router.post("/users/:id/role", canManageUsers, async (req, res) => {
 });
 
 /* =========================
-  KATEGORIJE DELA (branje za vse je na GET /api/work/categories)
+  KATEGORIJE DELA
+  (branje samo aktivnih za dropdown ob vnosu dela je na GET /api/work/categories;
+   tu je branje VSEH - vključno z neaktivnimi - za upravljanje)
 ========================= */
+router.get("/categories", async (req, res) => {
+  try {
+    const rows = await db.query(
+      "SELECT id, name, is_active FROM work_categories WHERE organization_id = ? ORDER BY name ASC",
+      [req.user.organization_id]
+    );
+
+    res.json(rows.map(serializeRow));
+  } catch (err) {
+    console.error("LIST CATEGORIES ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.post("/categories", async (req, res) => {
   try {
     const name = (req.body.name || "").trim();
@@ -206,16 +222,189 @@ router.post("/categories", async (req, res) => {
   }
 });
 
-router.delete("/categories/:id", async (req, res) => {
+router.put("/categories/:id", async (req, res) => {
+  try {
+    const name = (req.body.name || "").trim();
+
+    if (!name) {
+      return res.status(400).json({ message: "Vnesi ime kategorije" });
+    }
+
+    const result = await db.query(
+      "UPDATE work_categories SET name = ? WHERE id = ? AND organization_id = ?",
+      [name, req.params.id, req.user.organization_id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Kategorija ni najdena" });
+    }
+
+    res.json({ message: "Kategorija preimenovana" });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ message: "Kategorija s tem imenom že obstaja" });
+    }
+
+    console.error("RENAME CATEGORY ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/categories/:id/deactivate", async (req, res) => {
   try {
     await db.query(
-      "DELETE FROM work_categories WHERE id = ? AND organization_id = ?",
+      "UPDATE work_categories SET is_active = 0 WHERE id = ? AND organization_id = ?",
       [req.params.id, req.user.organization_id]
     );
 
-    res.json({ message: "Kategorija izbrisana" });
+    res.json({ message: "Kategorija deaktivirana" });
   } catch (err) {
-    console.error("DELETE CATEGORY ERROR:", err);
+    console.error("DEACTIVATE CATEGORY ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/categories/:id/activate", async (req, res) => {
+  try {
+    await db.query(
+      "UPDATE work_categories SET is_active = 1 WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    res.json({ message: "Kategorija aktivirana" });
+  } catch (err) {
+    console.error("ACTIVATE CATEGORY ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  EKIPE
+========================= */
+router.get("/teams", async (req, res) => {
+  try {
+    const teams = await db.query(
+      "SELECT id, name FROM teams WHERE organization_id = ? ORDER BY name ASC",
+      [req.user.organization_id]
+    );
+
+    if (!teams.length) return res.json([]);
+
+    const ids = teams.map(t => t.id);
+    const placeholders = ids.map(() => "?").join(",");
+
+    const memberRows = await db.query(
+      `SELECT team_id, user_id FROM team_members WHERE team_id IN (${placeholders})`,
+      ids
+    );
+
+    const membersByTeam = {};
+    memberRows.forEach(r => {
+      const key = Number(r.team_id);
+      if (!membersByTeam[key]) membersByTeam[key] = [];
+      membersByTeam[key].push(Number(r.user_id));
+    });
+
+    res.json(teams.map(t => ({
+      id: Number(t.id),
+      name: t.name,
+      member_ids: membersByTeam[Number(t.id)] || []
+    })));
+  } catch (err) {
+    console.error("LIST TEAMS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+async function setTeamMembers(organizationId, teamId, memberIds) {
+  const numericIds = Array.isArray(memberIds) ? memberIds.map(Number).filter(Boolean) : [];
+
+  await db.query("DELETE FROM team_members WHERE team_id = ?", [teamId]);
+
+  if (!numericIds.length) return;
+
+  const placeholders = numericIds.map(() => "?").join(",");
+
+  const validRows = await db.query(
+    `SELECT id FROM users WHERE id IN (${placeholders}) AND organization_id = ?`,
+    [...numericIds, organizationId]
+  );
+
+  for (const row of validRows) {
+    await db.query(
+      "INSERT IGNORE INTO team_members (team_id, user_id) VALUES (?, ?)",
+      [teamId, row.id]
+    );
+  }
+}
+
+router.post("/teams", async (req, res) => {
+  try {
+    const name = (req.body.name || "").trim();
+
+    if (!name) {
+      return res.status(400).json({ message: "Vnesi ime ekipe" });
+    }
+
+    const result = await db.query(
+      "INSERT INTO teams (organization_id, name) VALUES (?, ?)",
+      [req.user.organization_id, name]
+    );
+
+    await setTeamMembers(req.user.organization_id, result.insertId, req.body.member_ids);
+
+    res.json({ message: "Ekipa ustvarjena" });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ message: "Ekipa s tem imenom že obstaja" });
+    }
+
+    console.error("CREATE TEAM ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/teams/:id", async (req, res) => {
+  try {
+    const name = (req.body.name || "").trim();
+
+    if (!name) {
+      return res.status(400).json({ message: "Vnesi ime ekipe" });
+    }
+
+    const result = await db.query(
+      "UPDATE teams SET name = ? WHERE id = ? AND organization_id = ?",
+      [name, req.params.id, req.user.organization_id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Ekipa ni najdena" });
+    }
+
+    await setTeamMembers(req.user.organization_id, req.params.id, req.body.member_ids);
+
+    res.json({ message: "Ekipa posodobljena" });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ message: "Ekipa s tem imenom že obstaja" });
+    }
+
+    console.error("UPDATE TEAM ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.delete("/teams/:id", async (req, res) => {
+  try {
+    await db.query(
+      "DELETE FROM teams WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    res.json({ message: "Ekipa izbrisana" });
+  } catch (err) {
+    console.error("DELETE TEAM ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -252,14 +441,16 @@ router.get("/work", async (req, res) => {
 
 router.put("/work/:id", async (req, res) => {
   try {
-    const { task, started_at, ended_at, category_id } = req.body;
+    const { task, started_at, ended_at, category_id, participants } = req.body;
 
     const rows = await db.query(
-      "SELECT id FROM work_logs WHERE id = ? AND organization_id = ?",
+      "SELECT id, user_id FROM work_logs WHERE id = ? AND organization_id = ?",
       [req.params.id, req.user.organization_id]
     );
 
-    if (!rows.length) {
+    const workLog = rows[0];
+
+    if (!workLog) {
       return res.status(404).json({ message: "Ni najdeno" });
     }
 
@@ -268,6 +459,15 @@ router.put("/work/:id", async (req, res) => {
        WHERE id = ?`,
       [task, started_at, ended_at, category_id || null, req.params.id]
     );
+
+    if (Array.isArray(participants)) {
+      await db.query("DELETE FROM work_log_participants WHERE work_log_id = ?", [req.params.id]);
+
+      const participantsMap = await resolveOrgParticipants(db, req.user.organization_id, participants);
+      if (!participantsMap.has(workLog.user_id)) participantsMap.set(workLog.user_id, null);
+
+      await saveParticipants(db, req.params.id, participantsMap);
+    }
 
     res.json({ message: "Posodobljeno" });
   } catch (err) {

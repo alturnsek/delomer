@@ -21,7 +21,7 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
   - Email pošiljanje je za zdaj samo stub — povezava za nastavitev gesla se izpiše v strežniške loge (`src/utils/invites.js`), pravo pošiljanje (SMTP/Resend/ipd.) je TODO.
   - Prvi SUPER_ADMIN nastane ročno z SQL (`UPDATE users SET role='SUPER_ADMIN' WHERE email=...`, glej [migrations/002_super_admin_and_invites.sql](migrations/002_super_admin_and_invites.sql)), ne preko kode.
   - **Pravice so trenutno samo dvo-nivojske sklope** (`requireRole("ADMIN","SUPERINTENDENT")` vs `requireRole("ADMIN")`), ne granularen permission sistem. Eksplicitno dogovorjeno, da se bo to še razširilo, ko bo jasno kdo natančno sme kaj — glej spodaj.
-- **UI**: aplikacija je iz ene monolitne strani prestrukturirana v sidebar/burger meni (`#sidebar`, `.nav-link[data-view]` + `.view` sekcije v [src/public/index.html](src/public/index.html), routing v `showView()` v [src/public/script.js](src/public/script.js)). Nav linki se filtrirajo po `data-roles` glede na vlogo prijavljenega uporabnika.
+- **UI**: aplikacija je iz ene monolitne strani prestrukturirana v sidebar/burger meni (`#sidebar`, `.nav-link[data-view]` + `.view` sekcije v [src/public/index.html](src/public/index.html), routing v `showView()` v [src/public/script.js](src/public/script.js)). Nav linki se filtrirajo po `data-roles` glede na vlogo prijavljenega uporabnika. Burger gumb (☰, skrajno levo v headerju) je toggle, stanje odprto/zaprto si zapomni v `localStorage` (per-brskalnik, ne na strežniku).
 - **Deploy target**: Jira (KAN-103, KAN-104) je predvidel Azure + wildcard subdomeno. Trenutno imamo dva neodvisna deploy cilja: Azure VM prek GitHub Actions CI/CD (samo `main`, glej [.github/workflows/deploy.yml](.github/workflows/deploy.yml)) in doma TrueNAS SCALE (Nginx Proxy Manager + Cloudflare, domena `app.delomer.top`) za razvoj/testiranje na `dev` veji.
 - **Auth**: koda trenutno uporablja `express-session` (cookie seja, `passport.session()`), medtem ko je KAN-35/40/41 predvideval JWT (userId/tenantId/role) + httpOnly refresh cookie. `jsonwebtoken` je sicer v odvisnostih, a se še ne uporablja za auth flow — preveriti, ali ostanemo pri sejah ali migriramo na JWT.
 
@@ -51,11 +51,15 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 
 ### Epic: Work Logs (KAN-8)
 *(brez ločenega DRAFT koraka — vnos gre direktno v PENDING, poenostavljeno glede na dejanske zahteve)*
-- [x] Admin upravlja kategorije dela (dodaj/briši, po društvu) — `POST/DELETE /api/admin/categories`, USER izbira iz spustnega menija (`GET /api/work/categories`)
+- [x] Admin upravlja kategorije dela: dodaj, preimenuj, **deaktiviraj namesto brisanja** (`work_categories.is_active`) — stari vnosi ohranijo kategorijo, nove pa je ni več na voljo v dropdownu (`GET/POST/PUT /api/admin/categories`, `POST /api/admin/categories/:id/(de)activate`, branje samo aktivnih za USER na `GET /api/work/categories`)
 - [x] Ustvari vnos (task, čas, kategorija) → status PENDING
 - [x] Skupinski vnos: USER doda sodelavce (`work_log_participants`), validirano da so iz istega društva
+- [x] **Ekipe** — admin ustvari poimenovano skupino oseb (`teams`/`team_members`, `GET/POST/PUT/DELETE /api/admin/teams`), pri vnosu dela jo lahko izbereš in doda vse člane naenkrat, posamezne pa nato odkljukaš/dodaš
+- [x] **Iskanje in sortiranje sodelavcev** pri vnosu dela — filter po predpon i imena/priimka v realnem času, sort A-Ž/Ž-A po imenu ali priimku (client-side, `renderParticipantList()` v script.js)
+- [x] **Override ur na posameznega udeleženca** — `work_log_participants.minutes_override`; če ni nastavljen, se uporabi privzeto trajanje vnosa. Nastavlja ustvarjatelj vnosa (kreacija/urejanje) ali admin (`PUT /api/admin/work/:id` zdaj sprejme tudi `participants`)
 - [x] Uredi vnos — samo ustvarjatelj, samo dokler ni APPROVED; urejanje REJECTED vnosa ga vrne v PENDING
-- [x] Seznam "Moje aktivnosti" — vnosi kjer je uporabnik ustvarjatelj ali sodelavec, s statusom/kategorijo/sodelavci
+- [x] Seznam "Moje aktivnosti" — vnosi kjer je uporabnik ustvarjatelj ali sodelavec, s statusom/kategorijo/sodelavci (in njihovimi urami)
+- [ ] Admin queue (Potrjevanje dela) še nima gumba za urejanje udeležencev/ur neposredno iz seznama — trenutno se to ureja preko "Vnos dela" forme
 - [ ] Gostje (ime+priimek brez računa, ne štejejo v statistiko) — ni implementirano
 - [ ] Filtri po statusu/obdobju na seznamu
 

@@ -58,6 +58,7 @@
       <a href="#" class="nav-link" data-view="work" data-roles="ADMIN,SUPERINTENDENT,MEMBER">Vnos dela</a>
       <a href="#" class="nav-link" data-view="members" data-roles="ADMIN">Člani</a>
       <a href="#" class="nav-link" data-view="categories" data-roles="ADMIN,SUPERINTENDENT">Kategorije</a>
+      <a href="#" class="nav-link" data-view="teams" data-roles="ADMIN,SUPERINTENDENT">Ekipe</a>
       <a href="#" class="nav-link" data-view="approvals" data-roles="ADMIN,SUPERINTENDENT">Potrjevanje dela</a>
       <a href="#" class="nav-link" data-view="org-stats" data-roles="ADMIN,SUPERINTENDENT">Statistika društva</a>
       <a href="#" class="nav-link" data-view="organizations" data-roles="SUPER_ADMIN">Društva</a>
@@ -95,6 +96,18 @@
 
           <div class="field">
             <label>Sodelavci (opravljali delo skupaj)</label>
+            <div class="participant-controls">
+              <input id="participantSearch" placeholder="Išči po imenu ali priimku...">
+              <select id="participantSort">
+                <option value="first_asc">Ime A-Ž</option>
+                <option value="first_desc">Ime Ž-A</option>
+                <option value="last_asc">Priimek A-Ž</option>
+                <option value="last_desc">Priimek Ž-A</option>
+              </select>
+              <select id="teamQuickAdd">
+                <option value="">+ Dodaj ekipo...</option>
+              </select>
+            </div>
             <div id="participantCheckboxes" class="checkbox-list"></div>
           </div>
 
@@ -139,6 +152,21 @@
         </div>
 
         <ul id="categoryList"></ul>
+      </section>
+
+      <!-- EKIPE -->
+      <section id="view-teams" class="view hidden">
+        <h2>Ekipe</h2>
+
+        <div class="work-form">
+          <input id="teamName" placeholder="Ime ekipe">
+          <div id="teamMemberCheckboxes" class="checkbox-list"></div>
+          <button id="saveTeamBtn">Ustvari ekipo</button>
+          <button id="cancelTeamEditBtn" class="hidden secondary-btn">Prekliči urejanje</button>
+          <div id="teamMsg" class="error"></div>
+        </div>
+
+        <ul id="teamList"></ul>
       </section>
 
       <!-- POTRJEVANJE DELA -->

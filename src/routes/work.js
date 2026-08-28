@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../config/db');
 const { requireAuth } = require('../middleware/roles');
-const { serializeRow, attachParticipants, toNumber } = require('../utils/workLogs');
+const { serializeRow, attachParticipants, resolveOrgParticipants, saveParticipants } = require('../utils/workLogs');
 
 const router = express.Router();
 
@@ -10,14 +10,14 @@ router.use(requireAuth);
 
 
 /* =========================
-  KATEGORIJE (za dropdown ob vnosu dela)
+  KATEGORIJE (za dropdown ob vnosu dela - samo aktivne)
 ========================= */
 router.get('/categories', async (req, res) => {
   try {
     if (!req.user.organization_id) return res.json([]);
 
     const rows = await pool.query(
-      "SELECT id, name FROM work_categories WHERE organization_id = ? ORDER BY name ASC",
+      "SELECT id, name FROM work_categories WHERE organization_id = ? AND is_active = 1 ORDER BY name ASC",
       [req.user.organization_id]
     );
 
@@ -51,36 +51,45 @@ router.get('/organization-members', async (req, res) => {
 });
 
 
-// preveri, da udeleženci pripadajo istemu društvu kot prijavljeni uporabnik
-async function resolveParticipantIds(conn, organizationId, creatorId, rawIds) {
-  const participantIds = new Set([creatorId]);
+/* =========================
+  EKIPE (za hitro dodajanje več udeležencev naenkrat)
+========================= */
+router.get('/teams', async (req, res) => {
+  try {
+    if (!req.user.organization_id) return res.json([]);
 
-  const numericIds = Array.isArray(rawIds)
-    ? rawIds.map(Number).filter(Boolean)
-    : [];
-
-  if (numericIds.length && organizationId) {
-    const placeholders = numericIds.map(() => '?').join(',');
-
-    const validRows = await conn.query(
-      `SELECT id FROM users WHERE id IN (${placeholders}) AND organization_id = ?`,
-      [...numericIds, organizationId]
+    const teams = await pool.query(
+      "SELECT id, name FROM teams WHERE organization_id = ? ORDER BY name ASC",
+      [req.user.organization_id]
     );
 
-    validRows.forEach(r => participantIds.add(toNumber(r.id)));
-  }
+    if (!teams.length) return res.json([]);
 
-  return participantIds;
-}
+    const ids = teams.map(t => t.id);
+    const placeholders = ids.map(() => "?").join(",");
 
-async function saveParticipants(conn, workLogId, participantIds) {
-  for (const participantId of participantIds) {
-    await conn.query(
-      "INSERT IGNORE INTO work_log_participants (work_log_id, user_id) VALUES (?, ?)",
-      [workLogId, participantId]
+    const memberRows = await pool.query(
+      `SELECT team_id, user_id FROM team_members WHERE team_id IN (${placeholders})`,
+      ids
     );
+
+    const membersByTeam = {};
+    memberRows.forEach(r => {
+      const key = Number(r.team_id);
+      if (!membersByTeam[key]) membersByTeam[key] = [];
+      membersByTeam[key].push(Number(r.user_id));
+    });
+
+    res.json(teams.map(t => ({
+      id: Number(t.id),
+      name: t.name,
+      member_ids: membersByTeam[Number(t.id)] || []
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
   }
-}
+});
 
 
 /* =========================
@@ -90,7 +99,7 @@ router.post('/', async (req, res) => {
   const conn = await pool.getConnection();
 
   try {
-    const { task, started_at, ended_at, category_id, participant_ids } = req.body;
+    const { task, started_at, ended_at, category_id, participants } = req.body;
 
     if (!task) {
       return res.status(400).json({ error: "Task is required" });
@@ -115,11 +124,10 @@ router.post('/', async (req, res) => {
 
     const workLogId = insertResult.insertId;
 
-    const participantIds = await resolveParticipantIds(
-      conn, req.user.organization_id, req.user.id, participant_ids
-    );
+    const participantsMap = await resolveOrgParticipants(conn, req.user.organization_id, participants);
+    if (!participantsMap.has(req.user.id)) participantsMap.set(req.user.id, null);
 
-    await saveParticipants(conn, workLogId, participantIds);
+    await saveParticipants(conn, workLogId, participantsMap);
 
     res.json({ message: 'Work added' });
 
@@ -206,7 +214,7 @@ router.put('/:id', async (req, res) => {
   const conn = await pool.getConnection();
 
   try {
-    const { task, started_at, ended_at, category_id, participant_ids } = req.body;
+    const { task, started_at, ended_at, category_id, participants } = req.body;
 
     const rows = await conn.query(
       "SELECT * FROM work_logs WHERE id = ?",
@@ -237,14 +245,13 @@ router.put('/:id', async (req, res) => {
       [task, started_at, ended_at, category_id || null, req.params.id]
     );
 
-    if (Array.isArray(participant_ids)) {
+    if (Array.isArray(participants)) {
       await conn.query("DELETE FROM work_log_participants WHERE work_log_id = ?", [req.params.id]);
 
-      const participantIds = await resolveParticipantIds(
-        conn, req.user.organization_id, req.user.id, participant_ids
-      );
+      const participantsMap = await resolveOrgParticipants(conn, req.user.organization_id, participants);
+      if (!participantsMap.has(req.user.id)) participantsMap.set(req.user.id, null);
 
-      await saveParticipants(conn, req.params.id, participantIds);
+      await saveParticipants(conn, req.params.id, participantsMap);
     }
 
     res.json({ message: "Updated" });

@@ -7,8 +7,15 @@ const taskCount = document.getElementById("taskCount");
 
 let workToDelete = null;
 let editingWorkId = null;
+let editingTeamId = null;
 let currentUserId = null;
 let currentUserRole = null;
+
+let orgMembersCache = [];
+let orgTeamsCache = [];
+const selectedParticipants = new Map(); // userId -> minutesOverride|null
+
+const SIDEBAR_STORAGE_KEY = "delomer_sidebar_open";
 
 /* =========================
   VIEW ROUTING (sidebar meni)
@@ -16,7 +23,8 @@ let currentUserRole = null;
 const VIEW_LOADERS = {
   work: () => { loadCategories(); loadParticipantOptions(); loadWork(); },
   members: () => loadOrgMembers(),
-  categories: () => loadCategories(),
+  categories: () => loadCategoriesAdmin(),
+  teams: () => loadTeamsView(),
   approvals: () => loadAdminWork(),
   "org-stats": () => {},
   organizations: () => loadOrganizationsSuperadmin(),
@@ -36,8 +44,6 @@ function showView(viewName) {
   if (link) link.classList.add("active");
 
   if (VIEW_LOADERS[viewName]) VIEW_LOADERS[viewName]();
-
-  sidebar.classList.add("hidden");
 }
 
 document.querySelectorAll(".nav-link").forEach(link => {
@@ -47,8 +53,19 @@ document.querySelectorAll(".nav-link").forEach(link => {
   });
 });
 
+function isSidebarOpenPreferred() {
+  const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+  return stored === null ? true : stored === "1";
+}
+
+function applySidebarState() {
+  sidebar.classList.toggle("hidden", !isSidebarOpenPreferred());
+}
+
 document.getElementById("burgerBtn")?.addEventListener("click", () => {
-  sidebar.classList.toggle("hidden");
+  const nowOpen = sidebar.classList.contains("hidden");
+  sidebar.classList.toggle("hidden", !nowOpen);
+  localStorage.setItem(SIDEBAR_STORAGE_KEY, nowOpen ? "1" : "0");
 });
 
 
@@ -82,6 +99,8 @@ async function checkAuth() {
 
       currentUserId = data.user.id;
       currentUserRole = data.user.role;
+
+      applySidebarState();
 
       let firstVisible = null;
 
@@ -479,7 +498,7 @@ document.getElementById("bulkInviteBtn")?.addEventListener("click", async () => 
 
 
 /* =========================
-  KATEGORIJE DELA
+  KATEGORIJE DELA (dropdown ob vnosu dela - samo aktivne)
 ========================= */
 async function loadCategories() {
   const res = await fetch("/api/work/categories", { credentials: "include" });
@@ -492,24 +511,81 @@ async function loadCategories() {
     select.innerHTML = `<option value="">Brez kategorije</option>` +
       categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
   }
+}
 
+/* =========================
+  KATEGORIJE DELA (upravljanje - vse, tudi neaktivne)
+========================= */
+async function loadCategoriesAdmin() {
   const list = document.getElementById("categoryList");
-  if (list) {
-    list.innerHTML = categories.length
-      ? categories.map(c => `<li><span>${c.name}</span><button class="deleteCategoryBtn" data-id="${c.id}">❌</button></li>`).join("")
-      : "<li>Ni še kategorij</li>";
+  if (!list) return;
 
-    document.querySelectorAll(".deleteCategoryBtn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        await fetch(`/api/admin/categories/${btn.dataset.id}`, {
-          method: "DELETE",
-          credentials: "include"
-        });
+  const res = await fetch("/api/admin/categories", { credentials: "include" });
+  if (!res.ok) return;
 
-        loadCategories();
+  const categories = await res.json();
+
+  list.innerHTML = categories.length
+    ? categories.map(c => `
+        <li>
+          <span>${c.name} ${c.is_active ? "" : '<span class="status-badge status-REJECTED">neaktivna</span>'}</span>
+          <div class="actions">
+            <button class="renameCategoryBtn" data-id="${c.id}" data-name="${c.name}">✏️</button>
+            ${c.is_active
+              ? `<button class="deactivateCategoryBtn" data-id="${c.id}">Deaktiviraj</button>`
+              : `<button class="activateCategoryBtn" data-id="${c.id}">Aktiviraj</button>`}
+          </div>
+        </li>
+      `).join("")
+    : "<li>Ni še kategorij</li>";
+
+  list.querySelectorAll(".renameCategoryBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const newName = prompt("Novo ime kategorije:", btn.dataset.name);
+      if (newName === null || !newName.trim()) return;
+
+      const res = await fetch(`/api/admin/categories/${btn.dataset.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: newName.trim() })
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Napaka");
+        return;
+      }
+
+      loadCategoriesAdmin();
+      loadCategories();
     });
-  }
+  });
+
+  list.querySelectorAll(".deactivateCategoryBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/admin/categories/${btn.dataset.id}/deactivate`, {
+        method: "POST",
+        credentials: "include"
+      });
+
+      loadCategoriesAdmin();
+      loadCategories();
+    });
+  });
+
+  list.querySelectorAll(".activateCategoryBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/admin/categories/${btn.dataset.id}/activate`, {
+        method: "POST",
+        credentials: "include"
+      });
+
+      loadCategoriesAdmin();
+      loadCategories();
+    });
+  });
 }
 
 document.getElementById("addCategoryBtn")?.addEventListener("click", async () => {
@@ -539,15 +615,20 @@ document.getElementById("addCategoryBtn")?.addEventListener("click", async () =>
   }
 
   input.value = "";
-  loadCategories();
+  loadCategoriesAdmin();
 });
 
 
 /* =========================
-  ČLANI DRUŠTVA (za izbiro sodelavcev pri vnosu dela)
+  EKIPE
 ========================= */
-async function loadParticipantOptions() {
-  const container = document.getElementById("participantCheckboxes");
+async function loadTeamsView() {
+  await loadTeamMemberCheckboxes();
+  await loadTeamList();
+}
+
+async function loadTeamMemberCheckboxes() {
+  const container = document.getElementById("teamMemberCheckboxes");
   if (!container) return;
 
   const res = await fetch("/api/work/organization-members", { credentials: "include" });
@@ -558,12 +639,220 @@ async function loadParticipantOptions() {
   container.innerHTML = members.length
     ? members.map(m => `
         <label>
-          <input type="checkbox" class="participantCheckbox" value="${m.id}">
+          <input type="checkbox" class="teamMemberCheckbox" value="${m.id}">
           ${m.first_name} ${m.last_name}
         </label>
       `).join("")
-    : "<span>Ni drugih članov v društvu</span>";
+    : "<span>Ni članov v društvu</span>";
 }
+
+async function loadTeamList() {
+  const list = document.getElementById("teamList");
+  if (!list) return;
+
+  const res = await fetch("/api/admin/teams", { credentials: "include" });
+  if (!res.ok) return;
+
+  const teams = await res.json();
+
+  list.innerHTML = teams.length
+    ? teams.map(t => `
+        <li>
+          <span>${t.name} (${t.member_ids.length} članov)</span>
+          <div class="actions">
+            <button class="editTeamBtn" data-id="${t.id}">✏️</button>
+            <button class="deleteTeamBtn" data-id="${t.id}">❌</button>
+          </div>
+        </li>
+      `).join("")
+    : "<li>Ni še ekip</li>";
+
+  list.querySelectorAll(".editTeamBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const team = teams.find(t => t.id == btn.dataset.id);
+      if (!team) return;
+
+      editingTeamId = team.id;
+      document.getElementById("teamName").value = team.name;
+
+      document.querySelectorAll(".teamMemberCheckbox").forEach(cb => {
+        cb.checked = team.member_ids.includes(Number(cb.value));
+      });
+
+      document.getElementById("saveTeamBtn").innerText = "Posodobi ekipo";
+      document.getElementById("cancelTeamEditBtn").classList.remove("hidden");
+    });
+  });
+
+  list.querySelectorAll(".deleteTeamBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Izbriši to ekipo?")) return;
+
+      await fetch(`/api/admin/teams/${btn.dataset.id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+
+      loadTeamList();
+    });
+  });
+}
+
+document.getElementById("saveTeamBtn")?.addEventListener("click", async () => {
+  const name = document.getElementById("teamName").value.trim();
+  const msg = document.getElementById("teamMsg");
+
+  msg.innerText = "";
+
+  if (!name) {
+    msg.innerText = "Vnesi ime ekipe";
+    return;
+  }
+
+  const member_ids = Array.from(document.querySelectorAll(".teamMemberCheckbox:checked"))
+    .map(cb => Number(cb.value));
+
+  const url = editingTeamId ? `/api/admin/teams/${editingTeamId}` : "/api/admin/teams";
+  const method = editingTeamId ? "PUT" : "POST";
+
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ name, member_ids })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  resetTeamForm();
+  loadTeamList();
+});
+
+document.getElementById("cancelTeamEditBtn")?.addEventListener("click", resetTeamForm);
+
+function resetTeamForm() {
+  editingTeamId = null;
+
+  document.getElementById("teamName").value = "";
+  document.querySelectorAll(".teamMemberCheckbox").forEach(cb => cb.checked = false);
+  document.getElementById("saveTeamBtn").innerText = "Ustvari ekipo";
+  document.getElementById("cancelTeamEditBtn").classList.add("hidden");
+  document.getElementById("teamMsg").innerText = "";
+}
+
+
+/* =========================
+  SODELAVCI PRI VNOSU DELA (iskanje, sortiranje, ekipe, override ur)
+========================= */
+async function loadParticipantOptions() {
+  const container = document.getElementById("participantCheckboxes");
+  if (!container) return;
+
+  const res = await fetch("/api/work/organization-members", { credentials: "include" });
+  if (!res.ok) return;
+
+  orgMembersCache = await res.json();
+  renderParticipantList();
+  loadTeamsForPicker();
+}
+
+function renderParticipantList() {
+  const container = document.getElementById("participantCheckboxes");
+  if (!container) return;
+
+  const query = (document.getElementById("participantSearch")?.value || "").trim().toLowerCase();
+  const sortMode = document.getElementById("participantSort")?.value || "first_asc";
+
+  let members = orgMembersCache.filter(m => {
+    if (!query) return true;
+    return m.first_name.toLowerCase().startsWith(query) || m.last_name.toLowerCase().startsWith(query);
+  });
+
+  const [sortField, sortDir] = sortMode.split("_");
+  const sortKey = sortField === "first" ? "first_name" : "last_name";
+
+  members = [...members].sort((a, b) => {
+    const cmp = a[sortKey].localeCompare(b[sortKey], "sl");
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  container.innerHTML = members.length
+    ? members.map(m => {
+        const isChecked = selectedParticipants.has(m.id);
+        const overrideVal = selectedParticipants.get(m.id);
+
+        return `
+          <label class="participant-row">
+            <input type="checkbox" class="participantCheckbox" value="${m.id}" ${isChecked ? "checked" : ""}>
+            <span>${m.first_name} ${m.last_name}</span>
+            <input type="number" class="participantMinutesOverride ${isChecked ? "" : "hidden"}"
+                   data-id="${m.id}" min="0" placeholder="min"
+                   value="${overrideVal === null || overrideVal === undefined ? "" : overrideVal}">
+          </label>
+        `;
+      }).join("")
+    : "<span>Ni ujemajočih se članov</span>";
+
+  container.querySelectorAll(".participantCheckbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const id = Number(cb.value);
+      const overrideInput = container.querySelector(`.participantMinutesOverride[data-id="${id}"]`);
+
+      if (cb.checked) {
+        if (!selectedParticipants.has(id)) selectedParticipants.set(id, null);
+        overrideInput?.classList.remove("hidden");
+      } else {
+        selectedParticipants.delete(id);
+        overrideInput?.classList.add("hidden");
+      }
+    });
+  });
+
+  container.querySelectorAll(".participantMinutesOverride").forEach(input => {
+    input.addEventListener("input", () => {
+      const id = Number(input.dataset.id);
+      const val = input.value === "" ? null : Number(input.value);
+      selectedParticipants.set(id, val);
+    });
+  });
+}
+
+document.getElementById("participantSearch")?.addEventListener("input", renderParticipantList);
+document.getElementById("participantSort")?.addEventListener("change", renderParticipantList);
+
+async function loadTeamsForPicker() {
+  const select = document.getElementById("teamQuickAdd");
+  if (!select) return;
+
+  const res = await fetch("/api/work/teams", { credentials: "include" });
+  if (!res.ok) return;
+
+  orgTeamsCache = await res.json();
+
+  select.innerHTML = `<option value="">+ Dodaj ekipo...</option>` +
+    orgTeamsCache.map(t => `<option value="${t.id}">${t.name} (${t.member_ids.length})</option>`).join("");
+}
+
+document.getElementById("teamQuickAdd")?.addEventListener("change", (e) => {
+  const teamId = Number(e.target.value);
+  if (!teamId) return;
+
+  const team = orgTeamsCache.find(t => t.id === teamId);
+
+  if (team) {
+    team.member_ids.forEach(id => {
+      if (!selectedParticipants.has(id)) selectedParticipants.set(id, null);
+    });
+  }
+
+  e.target.value = "";
+  renderParticipantList();
+});
 
 
 /* =========================
@@ -610,9 +899,14 @@ async function loadAdminWork() {
   });
 }
 
+function formatParticipant(p, defaultMinutes) {
+  const minutes = p.minutes_override === null || p.minutes_override === undefined ? defaultMinutes : p.minutes_override;
+  return `${p.first_name} ${p.last_name} (${(minutes / 60).toFixed(2)} h)`;
+}
+
 function renderAdminWorkItem(w) {
   const hours = (w.minutes / 60).toFixed(2);
-  const participants = w.participants.map(p => `${p.first_name} ${p.last_name}`).join(", ");
+  const participants = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
 
   return `
     <li>
@@ -654,7 +948,7 @@ async function loadWork() {
 
   data.forEach(w => {
     const hours = (w.minutes / 60).toFixed(2);
-    const participantNames = w.participants.map(p => `${p.first_name} ${p.last_name}`).join(", ");
+    const participantNames = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
     const isOwner = w.user_id === currentUserId;
     const isLocked = w.status === "APPROVED";
 
@@ -691,9 +985,11 @@ async function loadWork() {
       document.getElementById("end").value = formatDate(item.ended_at);
       document.getElementById("workCategory").value = item.category_id || "";
 
-      document.querySelectorAll(".participantCheckbox").forEach(cb => {
-        cb.checked = item.participants.some(p => p.id == cb.value);
+      selectedParticipants.clear();
+      item.participants.forEach(p => {
+        if (p.id !== currentUserId) selectedParticipants.set(p.id, p.minutes_override ?? null);
       });
+      renderParticipantList();
 
     //posodobi števec
     document.getElementById("taskCount").innerText = `${item.task.length} / 255`;
@@ -732,8 +1028,8 @@ async function addWork() {
   const end = document.getElementById("end").value;
   const category_id = document.getElementById("workCategory").value || null;
 
-  const participant_ids = Array.from(document.querySelectorAll(".participantCheckbox:checked"))
-    .map(cb => Number(cb.value));
+  const participants = Array.from(selectedParticipants.entries())
+    .map(([user_id, minutes_override]) => ({ user_id, minutes_override }));
 
   if (!task || !end) {
     alert("Izpolni podatke");
@@ -745,7 +1041,7 @@ async function addWork() {
     started_at: start,
     ended_at: end,
     category_id,
-    participant_ids
+    participants
   };
 
   let res;
@@ -859,7 +1155,11 @@ function resetForm() {
   document.getElementById("start").value = getNowDateTime();
   document.getElementById("end").value = getNowDateTime();
   document.getElementById("workCategory").value = "";
-  document.querySelectorAll(".participantCheckbox").forEach(cb => cb.checked = false);
+
+  selectedParticipants.clear();
+  const searchInput = document.getElementById("participantSearch");
+  if (searchInput) searchInput.value = "";
+  renderParticipantList();
 
 
   //reset edit mode
