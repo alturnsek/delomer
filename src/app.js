@@ -31,10 +31,7 @@ SECURITY
 app.use(
   helmet({
     contentSecurityPolicy: {
-      useDefaults: true,
-      directives: {
-        "upgrade-insecure-requests": null // aplikacija (za zdaj) teče brez TLS
-      }
+      useDefaults: true
     }
   })
 );
@@ -72,7 +69,7 @@ app.use(
     rolling: true,
     cookie: {
       httpOnly: true,
-      secure: false, // za production dam na true ko bom mel nginx in cert
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax"
     }
   })

@@ -28,10 +28,18 @@ services:
       DB_HOST: db
       DB_PORT: 3306
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    networks:
+      - default
+      - npm_proxy
     depends_on:
       db:
         condition: service_healthy
+
+networks:
+  npm_proxy:
+    external: true
+    name: ${NPM_NETWORK_NAME:-npm_proxy}
 
 volumes:
   db_data:
