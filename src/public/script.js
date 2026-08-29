@@ -360,20 +360,34 @@ async function loadOrgMembers() {
   wireRoleSelects();
 
   document.querySelectorAll(".editMemberBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`memberEdit-${btn.dataset.id}`)?.classList.toggle("hidden");
+    });
+  });
+
+  document.querySelectorAll(".cancelMemberEditBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`memberEdit-${btn.dataset.id}`)?.classList.add("hidden");
+    });
+  });
+
+  document.querySelectorAll(".saveMemberBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
-      const member = members.find(m => m.id == btn.dataset.id);
-      if (!member) return;
+      const id = btn.dataset.id;
+      const panel = document.getElementById(`memberEdit-${id}`);
+      const first_name = panel.querySelector(".editFirstName").value.trim();
+      const last_name = panel.querySelector(".editLastName").value.trim();
+      const email = panel.querySelector(".editEmail").value.trim();
+      const msg = document.getElementById(`editMemberMsg-${id}`);
 
-      const first_name = prompt("Ime:", member.first_name);
-      if (first_name === null) return;
+      msg.innerText = "";
 
-      const last_name = prompt("Priimek:", member.last_name);
-      if (last_name === null) return;
+      if (!first_name || !last_name || !email) {
+        msg.innerText = "Izpolni vsa polja";
+        return;
+      }
 
-      const email = prompt("Email:", member.email);
-      if (email === null) return;
-
-      const res = await fetch(`/api/admin/users/${member.id}`, {
+      const res = await fetch(`/api/admin/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -383,7 +397,7 @@ async function loadOrgMembers() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.message || "Napaka");
+        msg.innerText = data.message || "Napaka";
         return;
       }
 
@@ -396,18 +410,30 @@ function renderOrgMember(m) {
   const isSelf = m.id === currentUserId;
 
   return `
-    <li>
-      <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
-      <div class="actions">
-        ${isSelf
-          ? `<span class="status-badge">${m.role}</span>`
-          : `<select class="roleSelect" data-id="${m.id}" data-endpoint="/api/admin/users">
-              <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
-              <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
-              <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
-            </select>`
-        }
-        <button class="editMemberBtn" data-id="${m.id}">✏️</button>
+    <li class="member-item" data-id="${m.id}">
+      <div class="member-row">
+        <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
+        <div class="actions">
+          ${isSelf
+            ? `<span class="status-badge">${m.role}</span>`
+            : `<select class="roleSelect" data-id="${m.id}" data-endpoint="/api/admin/users">
+                <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
+                <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
+                <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
+              </select>`
+          }
+          <button class="editMemberBtn" data-id="${m.id}">✏️</button>
+        </div>
+      </div>
+      <div class="member-edit-panel hidden" id="memberEdit-${m.id}">
+        <input class="editFirstName" value="${m.first_name}" placeholder="Ime">
+        <input class="editLastName" value="${m.last_name}" placeholder="Priimek">
+        <input class="editEmail" value="${m.email}" type="email" placeholder="Email">
+        <div id="editMemberMsg-${m.id}" class="error"></div>
+        <div class="edit-actions">
+          <button class="saveMemberBtn" data-id="${m.id}">Shrani</button>
+          <button class="cancelMemberEditBtn secondary-btn" data-id="${m.id}">Prekliči</button>
+        </div>
       </div>
     </li>
   `;

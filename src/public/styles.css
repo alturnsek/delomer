@@ -243,6 +243,43 @@ code {
   background: #64748b;
 }
 
+#orgMembersList .member-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.member-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-edit-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-edit-panel input {
+  margin: 0;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-actions button {
+  flex: 1;
+  margin-top: 0;
+}
+
 .status-badge {
   display: inline-block;
   padding: 2px 8px;
@@ -345,13 +382,7 @@ button:hover {
   APP DASHBOARD (sidebar + vsebina)
 ========================= */
 .app-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
   width: 100%;
-  max-width: 1000px;
-  margin: 30px auto;
-  padding: 0 20px;
 }
 
 .burger-btn {
@@ -371,16 +402,30 @@ button:hover {
   background: #f1f5f9;
 }
 
+/* Sidebar je "overlay" na skrajnem levem robu zaslona - lebdi nad vsebino,
+   ne zavzema layout prostora, zato content ostane enake širine ne glede
+   na to, ali je meni odprt ali zaprt. */
 .sidebar {
-  flex-shrink: 0;
+  position: fixed;
+  top: 100px;
+  left: 0;
+  bottom: 0;
   width: 220px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
   background: white;
-  border-radius: 12px;
   padding: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+  z-index: 500;
+}
+
+.content {
+  width: 100%;
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 0 20px;
 }
 
 .nav-link {
@@ -400,11 +445,6 @@ button:hover {
 .nav-link.active {
   background: #4f46e5;
   color: white;
-}
-
-.content {
-  flex: 1;
-  min-width: 0;
 }
 
 .placeholder-note {
