@@ -326,7 +326,8 @@ code {
 }
 
 #categoryList .category-item,
-#orgList .org-item {
+#orgList .org-item,
+#orgAdminsList .member-item {
   display: flex;
   flex-direction: column;
   align-items: stretch;

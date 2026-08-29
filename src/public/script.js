@@ -438,18 +438,104 @@ async function loadOrgAdminsUsers(organizationId) {
     : "<li>Ni še članov</li>";
 
   wireRoleSelects();
+
+  document.querySelectorAll(".editRoleManagedBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`roleManagedEdit-${btn.dataset.id}`)?.classList.toggle("hidden");
+    });
+  });
+
+  document.querySelectorAll(".cancelRoleManagedEditBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`roleManagedEdit-${btn.dataset.id}`)?.classList.add("hidden");
+    });
+  });
+
+  document.querySelectorAll(".resendInviteRoleManagedBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const msg = document.getElementById(`roleManagedMsg-${id}`);
+
+      const res = await fetch(`${btn.dataset.orgEndpoint}/${id}/resend-invite`, {
+        method: "POST",
+        credentials: "include"
+      });
+
+      const data = await res.json();
+      msg.innerText = data.message || "";
+      msg.style.color = res.ok ? "#16a34a" : "";
+    });
+  });
+
+  document.querySelectorAll(".saveRoleManagedBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const panel = document.getElementById(`roleManagedEdit-${id}`);
+      const first_name = panel.querySelector(".editFirstName").value.trim();
+      const last_name = panel.querySelector(".editLastName").value.trim();
+      const email = panel.querySelector(".editEmail").value.trim();
+      const msg = document.getElementById(`roleManagedMsg-${id}`);
+
+      msg.innerText = "";
+      msg.style.color = "";
+
+      if (!first_name || !last_name || !email) {
+        msg.innerText = "Izpolni vsa polja";
+        return;
+      }
+
+      const res = await fetch(`${btn.dataset.orgEndpoint}/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ first_name, last_name, email })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        msg.innerText = data.message || "Napaka";
+        return;
+      }
+
+      loadOrgAdminsUsers(organizationId);
+    });
+  });
 }
 
 function renderRoleManagedMember(m, roleEndpointBase) {
   return `
-    <li>
-      <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
-      <div class="actions">
-        <select class="roleSelect" data-id="${m.id}" data-endpoint="${roleEndpointBase}">
-          <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>${roleLabel("MEMBER")}</option>
-          <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>${roleLabel("SUPERINTENDENT")}</option>
-          <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>${roleLabel("ADMIN")}</option>
-        </select>
+    <li class="member-item" data-id="${m.id}">
+      <div class="member-row">
+        <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
+        <div class="actions">
+          <select class="roleSelect" data-id="${m.id}" data-endpoint="${roleEndpointBase}">
+            <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>${roleLabel("MEMBER")}</option>
+            <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>${roleLabel("SUPERINTENDENT")}</option>
+            <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>${roleLabel("ADMIN")}</option>
+          </select>
+          <button class="editRoleManagedBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>
+        </div>
+      </div>
+      <div class="edit-panel hidden" id="roleManagedEdit-${m.id}">
+        <div class="field">
+          <label>Ime</label>
+          <input class="editFirstName" value="${m.first_name}">
+        </div>
+        <div class="field">
+          <label>Priimek</label>
+          <input class="editLastName" value="${m.last_name}">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input class="editEmail" value="${m.email}" type="email">
+        </div>
+        <div id="roleManagedMsg-${m.id}" class="error"></div>
+        <div class="edit-actions">
+          <button class="saveRoleManagedBtn icon-btn btn-edit" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Shrani</button>
+          ${!m.activated ? `<button class="resendInviteRoleManagedBtn icon-btn btn-edit" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Ponovno pošlji vabilo</button>` : ""}
+          <button class="cancelRoleManagedEditBtn secondary-btn" data-id="${m.id}">Prekliči</button>
+        </div>
       </div>
     </li>
   `;
@@ -558,6 +644,22 @@ function renderOrgMembersList() {
     });
   });
 
+  document.querySelectorAll(".resendInviteBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const msg = document.getElementById(`editMemberMsg-${id}`);
+
+      const res = await fetch(`/api/admin/users/${id}/resend-invite`, {
+        method: "POST",
+        credentials: "include"
+      });
+
+      const data = await res.json();
+      msg.innerText = data.message || "";
+      msg.style.color = res.ok ? "#16a34a" : "";
+    });
+  });
+
   document.querySelectorAll(".activateMemberBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
       await fetch(`/api/admin/users/${btn.dataset.id}/activate`, {
@@ -651,6 +753,7 @@ function renderOrgMember(m) {
         <div id="editMemberMsg-${m.id}" class="error"></div>
         <div class="edit-actions">
           <button class="saveMemberBtn icon-btn btn-edit" data-id="${m.id}">Shrani</button>
+          ${!m.activated ? `<button class="resendInviteBtn icon-btn btn-edit" data-id="${m.id}">Ponovno pošlji vabilo</button>` : ""}
           ${!isSelf ? (m.is_active
             ? `<button class="deactivateMemberBtn icon-btn btn-reject" data-id="${m.id}">Deaktiviraj</button>`
             : `<button class="activateMemberBtn icon-btn btn-approve" data-id="${m.id}">Aktiviraj</button>`

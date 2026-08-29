@@ -1,7 +1,7 @@
 const express = require("express");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
-const { createInviteToken, sendInviteEmail } = require("../utils/invites");
+const { createInviteToken, sendInviteEmail, issueAndSendInvite } = require("../utils/invites");
 const { serializeRow } = require("../utils/workLogs");
 
 const router = express.Router();
@@ -156,6 +156,78 @@ router.get("/organizations/:id/users", async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("LIST ORG USERS (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  UREDI PODATKE ČLANA V DRUŠTVU
+========================= */
+router.put("/organizations/:id/users/:userId", async (req, res) => {
+  try {
+    const { first_name, last_name, email } = req.body;
+
+    if (!first_name || !last_name || !email) {
+      return res.status(400).json({ message: "Manjkajo podatki" });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const rows = await db.query(
+      "SELECT id FROM users WHERE id = ? AND organization_id = ?",
+      [req.params.userId, req.params.id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    const emailTaken = await db.query(
+      "SELECT id FROM users WHERE email = ? AND id != ?",
+      [cleanEmail, req.params.userId]
+    );
+
+    if (emailTaken.length) {
+      return res.status(400).json({ message: "Email je že uporabljen" });
+    }
+
+    await db.query(
+      "UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE id = ?",
+      [first_name.trim(), last_name.trim(), cleanEmail, req.params.userId]
+    );
+
+    res.json({ message: "Posodobljeno" });
+  } catch (err) {
+    console.error("EDIT USER (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  PONOVNO POŠLJI VABILO (če član še ni aktiviral računa)
+========================= */
+router.post("/organizations/:id/users/:userId/resend-invite", async (req, res) => {
+  try {
+    const rows = await db.query(
+      "SELECT id, email, password_hash FROM users WHERE id = ? AND organization_id = ?",
+      [req.params.userId, req.params.id]
+    );
+
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    if (user.password_hash) {
+      return res.status(400).json({ message: "Uporabnik je že aktiviral račun" });
+    }
+
+    await issueAndSendInvite(user.id, user.email);
+
+    res.json({ message: "Vabilo ponovno poslano (glej strežniške loge za povezavo)" });
+  } catch (err) {
+    console.error("RESEND INVITE (SUPERADMIN) ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const db = require("../config/db");
 
-const INVITE_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dni
+const INVITE_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6 ur
 
 function createInviteToken() {
   return {
@@ -71,4 +71,17 @@ async function sendInviteEmail(email, token) {
   }
 }
 
-module.exports = { createInviteToken, sendInviteEmail };
+// Ustvari nov (svež, 6-urni) token in ponovno pošlje vabilo - za "Ponovno
+// pošlji vabilo" akcijo, ko uporabnik še ni aktiviral računa.
+async function issueAndSendInvite(userId, email) {
+  const { token, expiresAt } = createInviteToken();
+
+  await db.query(
+    "UPDATE users SET invite_token = ?, invite_token_expires_at = ? WHERE id = ?",
+    [token, expiresAt, userId]
+  );
+
+  await sendInviteEmail(email, token);
+}
+
+module.exports = { createInviteToken, sendInviteEmail, issueAndSendInvite };

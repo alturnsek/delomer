@@ -1,7 +1,7 @@
 const express = require("express");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
-const { createInviteToken, sendInviteEmail } = require("../utils/invites");
+const { createInviteToken, sendInviteEmail, issueAndSendInvite } = require("../utils/invites");
 const { serializeRow, attachParticipants, resolveOrgParticipants, saveParticipants } = require("../utils/workLogs");
 
 const router = express.Router();
@@ -208,6 +208,35 @@ router.put("/users/:id", canManageUsers, async (req, res) => {
     res.json({ message: "Posodobljeno" });
   } catch (err) {
     console.error("EDIT USER ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  PONOVNO POŠLJI VABILO (če član še ni aktiviral računa)
+========================= */
+router.post("/users/:id/resend-invite", canManageUsers, async (req, res) => {
+  try {
+    const rows = await db.query(
+      "SELECT id, email, password_hash FROM users WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    if (user.password_hash) {
+      return res.status(400).json({ message: "Uporabnik je že aktiviral račun" });
+    }
+
+    await issueAndSendInvite(user.id, user.email);
+
+    res.json({ message: "Vabilo ponovno poslano (glej strežniške loge za povezavo)" });
+  } catch (err) {
+    console.error("RESEND INVITE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
