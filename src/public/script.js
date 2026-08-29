@@ -40,7 +40,7 @@ const VIEW_LOADERS = {
   organizations: () => loadOrganizationsSuperadmin(),
   "org-admins": () => loadOrgAdminsOrgOptions(),
   "platform-stats": () => {},
-  profile: () => {}
+  profile: () => loadProfileView()
 };
 
 function showView(viewName) {
@@ -1281,6 +1281,127 @@ async function addWork() {
   loadWork();
 }
 
+
+
+/* =========================
+  MOJ PROFIL
+========================= */
+let profileChartInstance = null;
+
+async function loadProfileView() {
+  const res = await fetch("/api/users/me", { credentials: "include" });
+  const data = await res.json();
+
+  if (!data.loggedIn) return;
+
+  const user = data.user;
+
+  document.getElementById("profileFirstName").innerText = user.first_name;
+  document.getElementById("profileLastName").innerText = user.last_name;
+  document.getElementById("profileEmail").innerText = user.email;
+  document.getElementById("profileOrg").innerText = user.organization_name || "-";
+  document.getElementById("profileAvatarImg").src = user.avatar_path || "logo.png";
+
+  const fromInput = document.getElementById("profileStatsFrom");
+  const toInput = document.getElementById("profileStatsTo");
+
+  if (!fromInput.value || !toInput.value) {
+    const now = new Date();
+    const monthAgo = new Date(now);
+    monthAgo.setMonth(now.getMonth() - 1);
+
+    fromInput.value = formatDateForInput(monthAgo);
+    toInput.value = formatDateForInput(now);
+  }
+
+  loadProfileStats();
+}
+
+async function loadProfileStats() {
+  const from = document.getElementById("profileStatsFrom")?.value;
+  const to = document.getElementById("profileStatsTo")?.value;
+
+  if (!from || !to) return;
+
+  const res = await fetch(`/api/users/me/stats?from=${from}&to=${to}`, { credentials: "include" });
+  if (!res.ok) return;
+
+  const data = await res.json();
+  renderProfileChart(data, from, to);
+}
+
+function renderProfileChart(data, from, to) {
+  const canvas = document.getElementById("profileChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const byDate = Object.fromEntries(data.map(d => [d.date, d.minutes]));
+  const labels = [];
+  const values = [];
+
+  const cursor = new Date(from);
+  const end = new Date(to);
+
+  while (cursor <= end) {
+    const key = formatDateForInput(cursor);
+    labels.push(formatDateDisplay(key));
+    values.push(Math.round(((byDate[key] || 0) / 60) * 100) / 100);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  if (profileChartInstance) profileChartInstance.destroy();
+
+  profileChartInstance = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Opravljene ure",
+        data: values,
+        borderColor: "#4f46e5",
+        backgroundColor: "rgba(79,70,229,0.1)",
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+document.getElementById("profileStatsFrom")?.addEventListener("change", loadProfileStats);
+document.getElementById("profileStatsTo")?.addEventListener("change", loadProfileStats);
+
+document.getElementById("avatarInput")?.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  const msg = document.getElementById("avatarMsg");
+
+  msg.innerText = "";
+
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const res = await fetch("/api/users/me/avatar", {
+    method: "POST",
+    credentials: "include",
+    body: formData
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka pri nalaganju slike";
+    return;
+  }
+
+  document.getElementById("profileAvatarImg").src = data.avatar_path;
+});
 
 
 /* =========================

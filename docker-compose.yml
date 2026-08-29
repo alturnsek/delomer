@@ -32,6 +32,8 @@ services:
     networks:
       - default
       - npm_proxy
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -43,3 +45,4 @@ networks:
 
 volumes:
   db_data:
+  uploads_data:

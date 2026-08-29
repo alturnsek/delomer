@@ -248,10 +248,58 @@
         <p class="placeholder-note">Statistika društev bo na voljo kmalu.</p>
       </section>
 
-      <!-- MOJ PROFIL (placeholder) -->
+      <!-- MOJ PROFIL -->
       <section id="view-profile" class="view hidden">
         <h2>Moj profil</h2>
-        <p class="placeholder-note">Osebna statistika skozi čas bo na voljo kmalu.</p>
+
+        <div class="profile-card">
+          <div class="profile-avatar-wrap">
+            <img id="profileAvatarImg" src="logo.png" alt="Profilna slika" class="profile-avatar">
+            <label class="icon-btn btn-edit avatar-upload-label">
+              Spremeni sliko
+              <input type="file" id="avatarInput" accept="image/*" class="hidden-file-input">
+            </label>
+            <div id="avatarMsg" class="error"></div>
+          </div>
+
+          <div class="profile-info">
+            <div class="field">
+              <label>Ime</label>
+              <div id="profileFirstName" class="profile-value"></div>
+            </div>
+            <div class="field">
+              <label>Priimek</label>
+              <div id="profileLastName" class="profile-value"></div>
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <div id="profileEmail" class="profile-value"></div>
+            </div>
+            <div class="field">
+              <label>Društvo</label>
+              <div id="profileOrg" class="profile-value"></div>
+            </div>
+          </div>
+        </div>
+
+        <h2>Statistika dela</h2>
+
+        <div class="work-form">
+          <div class="row">
+            <div class="field">
+              <label>Od datuma</label>
+              <input type="date" id="profileStatsFrom">
+            </div>
+            <div class="field">
+              <label>Do datuma</label>
+              <input type="date" id="profileStatsTo">
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="profileChart"></canvas>
+        </div>
       </section>
 
     </div>
@@ -273,6 +321,7 @@
   <p>© 2026 Delomer</p>
 </footer>
 
+<script src="js/chart.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

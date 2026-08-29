@@ -1,7 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const path = require("path");
+const fs = require("fs");
 const db = require("../config/db");
 const passport = require("passport");
+const { requireAuth } = require("../middleware/roles");
+const { uploadAvatar } = require("../middleware/upload");
 
 const router = express.Router();
 
@@ -16,7 +20,8 @@ function toPublicUser(user) {
     last_name: user.last_name,
     organization_id: user.organization_id,
     organization_name: user.organization_name,
-    role: user.role
+    role: user.role,
+    avatar_path: user.avatar_path || null
   };
 }
 
@@ -170,6 +175,77 @@ router.get("/me", (req, res) => {
     loggedIn: true,
     user: toPublicUser(req.user)
   });
+});
+
+
+/* =========================
+  PROFILNA SLIKA
+========================= */
+router.post("/me/avatar", requireAuth, (req, res, next) => {
+  uploadAvatar.single("avatar")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message || "Napaka pri nalaganju datoteke" });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Manjka datoteka" });
+    }
+
+    const relativePath = `/uploads/avatars/${req.file.filename}`;
+
+    const rows = await db.query("SELECT avatar_path FROM users WHERE id = ?", [req.user.id]);
+    const oldPath = rows[0]?.avatar_path;
+
+    await db.query("UPDATE users SET avatar_path = ? WHERE id = ?", [relativePath, req.user.id]);
+
+    if (oldPath) {
+      fs.unlink(path.join(__dirname, "..", "..", oldPath), () => {});
+    }
+
+    res.json({ message: "Slika naložena", avatar_path: relativePath });
+  } catch (err) {
+    console.error("AVATAR UPLOAD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  STATISTIKA DELA (za "Moj profil")
+========================= */
+router.get("/me/stats", requireAuth, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "Manjkata from/to parametra" });
+    }
+
+    const rows = await db.query(
+      `SELECT DATE(work_logs.started_at) AS work_date,
+              SUM(COALESCE(work_log_participants.minutes_override,
+                           TIMESTAMPDIFF(MINUTE, work_logs.started_at, work_logs.ended_at))) AS minutes
+       FROM work_logs
+       JOIN work_log_participants ON work_log_participants.work_log_id = work_logs.id
+       WHERE work_log_participants.user_id = ?
+         AND work_logs.status = 'APPROVED'
+         AND DATE(work_logs.started_at) BETWEEN ? AND ?
+       GROUP BY DATE(work_logs.started_at)
+       ORDER BY work_date ASC`,
+      [req.user.id, from, to]
+    );
+
+    res.json(rows.map(r => ({
+      date: r.work_date instanceof Date ? r.work_date.toISOString().slice(0, 10) : r.work_date,
+      minutes: Number(r.minutes)
+    })));
+  } catch (err) {
+    console.error("GET STATS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 

@@ -95,10 +95,11 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 - [ ] Uporabniški priročnik (member/admin flow)
 - [ ] Deployment dokumentacija (Azure + Docker/TrueNAS, env var seznam)
 
-## Statistika in profil (placeholder strani, brez prave logike)
+## Statistika in profil
 
-- [x] "Statistika društva" (ADMIN/SUPERINTENDENT), "Statistika društev" (SUPER_ADMIN), "Moj profil" (vsi) — samo prazne placeholder sekcije v sidebar meniju, brez API-ja ali izračunov
-- [ ] Dejanska statistika (skupaj ur, po obdobjih, grafi) — čaka na to, da bo dovolj podatkov/APPROVED vnosov za smiselno prikazati; `chart.js` je že vključen v `src/public/js/chart.js` za kasnejšo uporabo
+- [x] **Moj profil** (vsi uporabniki) — ime/priimek/email/društvo (samo prikaz, brez urejanja), profilna slika (upload preko `POST /api/users/me/avatar`, multer, shranjeno v `uploads/avatars/` - **trajen Docker volumen `uploads_data:/app/uploads`**, ne v `src/public` ker bi se ob vsakem `--build` izgubilo), graf opravljenih ur skozi čas (`GET /api/users/me/stats?from&to`, Chart.js, privzeto zadnji mesec) — glej [migrations/006_avatar_and_profile_stats.sql](migrations/006_avatar_and_profile_stats.sql)
+- [ ] "Statistika društva" (ADMIN/SUPERINTENDENT) in "Statistika društev" (SUPER_ADMIN) so še vedno prazne placeholder sekcije — analogen pristop kot pri profilu (agregacija APPROVED work_logs), samo na nivoju društva/vseh društev namesto enega uporabnika
+- **Prihodnja arhitekturna sprememba (dogovorjeno, ne zdaj)**: uporabnik trenutno pripada natanko enemu društvu (`users.organization_id`, striktna 1:1). V prihodnosti načrtovana nadgradnja na možnost, da je en uporabnik član več društev hkrati - to bo zahtevalo many-to-many model (ločena tabela članstev z vlogo per-društvo) in posege v RBAC/delo/potrjevanje. Namenoma odloženo dokler ne bo dejansko potrebno.
 
 ## Kasneje / nice-to-have
 

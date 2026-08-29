@@ -13,3 +13,6 @@ Thumbs.db
 
 #ostalo
 ostalo/
+
+# naložene datoteke uporabnikov (profilne slike ipd.) - persistirajo v Docker volumnu, ne v gitu
+uploads/
