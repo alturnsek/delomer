@@ -832,6 +832,10 @@ button:hover {
   align-items: flex-end;
 }
 
+#addCategoryBtn {
+  align-self: center;
+}
+
 /* FIELD */
 .field {
   display: flex;

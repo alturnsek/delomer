@@ -85,7 +85,7 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 ### Epic: Approvals (KAN-9)
 - [x] Admin approval queue — `GET /api/admin/work` (vsi vnosi društva, PENDING najprej)
 - [x] Potrdi zapis (PENDING → APPROVED) — `POST /api/admin/work/:id/approve`
-- [x] Zavrni zapis z obveznim razlogom (PENDING → REJECTED) — `POST /api/admin/work/:id/reject`
+- [x] Zavrni zapis z obveznim razlogom (PENDING → REJECTED) — `POST /api/admin/work/:id/reject`, ki ob uspehu pošlje ustvarjatelju vnosa **email z razlogom zavrnitve** (`sendWorkRejectedEmail()` v `src/utils/invites.js`, isti `deliverEmail()`/log-ali-real mehanizem kot ostala pošta); tiho preskočeno, če ustvarjatelj nima nastavljenega emaila (npr. član brez računa)
 - [x] Auto-approve job (PENDING starejši od 30 dni → APPROVED, `is_auto_approved=1`) — `src/jobs/autoApprove.js`, teče ob zagonu strežnika + vsako uro
 - [x] Admin lahko ureja katerikoli vnos v društvu — `PUT /api/admin/work/:id` (task/čas/kategorija; urejanje sodelavcev za admina še ni na voljo)
 - [ ] Audit log potrditev/zavrnitev (trenutno samo `reviewed_by`/`reviewed_at` na vnosu, brez ločene zgodovine)

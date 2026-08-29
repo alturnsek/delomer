@@ -1231,8 +1231,8 @@ async function loadCategoriesAdmin() {
             <div class="actions">
               <button class="editCategoryBtn icon-btn btn-edit" data-id="${c.id}">${ICON_EDIT}</button>
               ${c.is_active
-                ? `<button class="deactivateCategoryBtn" data-id="${c.id}">Deaktiviraj</button>`
-                : `<button class="activateCategoryBtn" data-id="${c.id}">Aktiviraj</button>`}
+                ? `<button class="deactivateCategoryBtn icon-btn btn-reject" data-id="${c.id}">Deaktiviraj</button>`
+                : `<button class="activateCategoryBtn icon-btn btn-approve" data-id="${c.id}">Aktiviraj</button>`}
             </div>
           </div>
           <div class="edit-panel hidden" id="categoryEdit-${c.id}">
@@ -1483,6 +1483,8 @@ document.getElementById("saveTeamBtn")?.addEventListener("click", async () => {
   const url = editingTeamId ? `/api/admin/teams/${editingTeamId}` : "/api/admin/teams";
   const method = editingTeamId ? "PUT" : "POST";
 
+  const wasEditing = !!editingTeamId;
+
   const res = await fetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
@@ -1499,6 +1501,10 @@ document.getElementById("saveTeamBtn")?.addEventListener("click", async () => {
 
   resetTeamForm();
   loadTeamList();
+
+  if (wasEditing) {
+    document.querySelector('#view-teams .subtab-btn[data-subtab="list"]')?.click();
+  }
 });
 
 document.getElementById("cancelTeamEditBtn")?.addEventListener("click", resetTeamForm);
