@@ -936,9 +936,7 @@ document.getElementById("rosterAddBtn")?.addEventListener("click", async () => {
 
   const entries = raw.split("\n")
     .map(line => {
-      const parts = line.trim().split(/\s+/);
-      const last_name = parts.pop() || "";
-      const first_name = parts.join(" ");
+      const [first_name, last_name] = line.split(",").map(v => (v || "").trim());
       return { first_name, last_name };
     })
     .filter(e => e.first_name && e.last_name);
