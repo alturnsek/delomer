@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
 const { createInviteToken, sendInviteEmail } = require("../utils/invites");
+const { serializeRow } = require("../utils/workLogs");
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.get("/organizations", async (req, res) => {
        ORDER BY organizations.name ASC`
     );
 
-    res.json(rows);
+    res.json(rows.map(serializeRow));
   } catch (err) {
     console.error("LIST ORGANIZATIONS (SUPERADMIN) ERROR:", err);
     res.status(500).json({ message: "Server error" });
