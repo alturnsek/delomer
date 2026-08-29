@@ -111,4 +111,23 @@ async function issueAndSendInvite(userId, email) {
   await sendInviteEmail(email, token);
 }
 
-module.exports = { createInviteToken, sendInviteEmail, sendPasswordChangedEmail, issueAndSendInvite };
+// Obvestilo ob samopostrežni registraciji preko registracijske povezave društva
+// (varnostni ukrep - da lastnik emaila ve, da je bil ravnokar ustvarjen račun).
+async function sendAccountClaimedEmail(email, organizationName) {
+  await deliverEmail({
+    to: email,
+    subject: "Vaš Delomer račun je bil ustvarjen",
+    html: `<p>Pravkar ste si preko registracijske povezave društva${organizationName ? ` "${organizationName}"` : ""} ustvarili račun v aplikaciji Delomer.</p>
+           <p>Če to niste bili vi, se obrnite na administratorja društva.</p>`,
+    logLabel: "ACCOUNT_CLAIMED",
+    fallbackText: `Račun za ${email} ustvarjen preko registracijske povezave`
+  });
+}
+
+module.exports = {
+  createInviteToken,
+  sendInviteEmail,
+  sendPasswordChangedEmail,
+  issueAndSendInvite,
+  sendAccountClaimedEmail
+};

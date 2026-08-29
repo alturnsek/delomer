@@ -55,7 +55,7 @@
 
   <div id="appLayout" class="hidden app-layout">
     <nav id="sidebar" class="sidebar hidden">
-      <a href="#" class="nav-link" data-view="work" data-roles="ADMIN,SUPERINTENDENT,MEMBER">Vnos dela</a>
+      <a href="#" class="nav-link" data-view="work" data-roles="ADMIN,SUPERINTENDENT,MEMBER,PUBLIC">Vnos dela</a>
       <a href="#" class="nav-link" data-view="members" data-roles="ADMIN,SUPERINTENDENT">Člani</a>
       <a href="#" class="nav-link" data-view="org-settings" data-roles="ADMIN">Nastavitve društva</a>
       <a href="#" class="nav-link" data-view="categories" data-roles="ADMIN,SUPERINTENDENT">Kategorije</a>
@@ -157,6 +157,10 @@
             <input id="inviteFirst" placeholder="Ime">
             <input id="inviteLast" placeholder="Priimek">
             <input id="inviteEmail" type="email" placeholder="Email">
+            <label class="toggle-row">
+              <span class="toggle-switch"><input type="checkbox" id="invitePublicKiosk"><span class="toggle-slider"></span></span>
+              Javni (kiosk) račun — samo za vnos dela, brez dostopa do ostalega
+            </label>
             <button id="inviteUserBtn">Povabi člana</button>
             <div id="inviteMsg" class="error"></div>
           </div>
@@ -166,6 +170,13 @@
             <textarea id="bulkInviteText" rows="5" placeholder="Janez,Novak,janez@primer.si"></textarea>
             <button id="bulkInviteBtn">Povabi vse</button>
             <div id="bulkInviteMsg" class="error"></div>
+          </div>
+
+          <div class="work-form">
+            <label>Člani brez emaila — samo za seznam (npr. veliko članov naenkrat, ki se lahko kasneje sami registrirajo preko registracijske povezave društva iz zavihka "Registracija"). Ena vrstica na osebo: <code>Ime Priimek</code></label>
+            <textarea id="rosterAddText" rows="5" placeholder="Janez Novak"></textarea>
+            <button id="rosterAddBtn">Dodaj na seznam</button>
+            <div id="rosterAddMsg" class="error"></div>
           </div>
         </div>
       </section>
@@ -276,6 +287,7 @@
         <div class="subtabs">
           <button type="button" class="subtab-btn active" data-subtab="general">Splošno</button>
           <button type="button" class="subtab-btn" data-subtab="officials">Funkcionarji</button>
+          <button type="button" class="subtab-btn" data-subtab="registration">Registracija</button>
         </div>
 
         <div class="subtab-panel" data-subtab-panel="general">
@@ -361,6 +373,26 @@
           </div>
 
           <ul id="officialsList"></ul>
+        </div>
+
+        <div class="subtab-panel hidden" data-subtab-panel="registration">
+          <div class="work-form">
+            <label>Registracijska povezava društva</label>
+            <p>Deli to povezavo samo pravim članom (oglasna deska, WhatsApp skupina ipd.). Kdor jo odpre, poišče svoje ime na seznamu neregistriranih članov in si sam nastavi email in geslo.</p>
+
+            <div class="row">
+              <input id="joinCodeUrl" readonly>
+              <button id="copyJoinCodeBtn" type="button" class="secondary-btn">Kopiraj</button>
+            </div>
+
+            <label class="toggle-row">
+              <span class="toggle-switch"><input type="checkbox" id="registrationEnabledToggle"><span class="toggle-slider"></span></span>
+              Samopostrežna registracija omogočena
+            </label>
+
+            <button id="regenerateJoinCodeBtn" class="icon-btn btn-reject">Ustvari novo povezavo (stara preneha delovati)</button>
+            <div id="joinCodeMsg" class="error"></div>
+          </div>
         </div>
       </section>
 

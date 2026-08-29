@@ -31,7 +31,8 @@ const ROLE_LABELS = {
   SUPER_ADMIN: "Super administrator",
   ADMIN: "Administrator",
   SUPERINTENDENT: "Nadzornik",
-  MEMBER: "Član"
+  MEMBER: "Član",
+  PUBLIC: "Javni (kiosk)"
 };
 
 function roleLabel(role) {
@@ -581,8 +582,8 @@ function renderOrgAdminsList() {
       msg.innerText = "";
       msg.style.color = "";
 
-      if (!first_name || !last_name || !email) {
-        msg.innerText = "Izpolni vsa polja";
+      if (!first_name || !last_name) {
+        msg.innerText = "Izpolni ime in priimek";
         return;
       }
 
@@ -612,16 +613,19 @@ document.getElementById("orgAdminsSort")?.addEventListener("change", renderOrgAd
 
 function renderRoleManagedMember(m, roleEndpointBase) {
   const inactiveNote = m.is_active ? "" : " (deaktiviran)";
+  const emailNote = m.email ? ` — ${m.email}` : " — brez emaila";
+  const statusNote = m.activated ? "" : (m.email ? " (čaka aktivacijo)" : " (ni registriran)");
 
   return `
     <li class="member-item${m.is_active ? "" : " member-inactive"}" data-id="${m.id}">
       <div class="member-row">
-        <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}${inactiveNote}</span>
+        <span>${m.first_name} ${m.last_name}${emailNote}${statusNote}${inactiveNote}</span>
         <div class="actions">
           <select class="roleSelect" data-id="${m.id}" data-endpoint="${roleEndpointBase}">
             <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>${roleLabel("MEMBER")}</option>
             <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>${roleLabel("SUPERINTENDENT")}</option>
             <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>${roleLabel("ADMIN")}</option>
+            <option value="PUBLIC" ${m.role === "PUBLIC" ? "selected" : ""}>${roleLabel("PUBLIC")}</option>
           </select>
           <button class="editRoleManagedBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>
         </div>
@@ -637,12 +641,12 @@ function renderRoleManagedMember(m, roleEndpointBase) {
         </div>
         <div class="field">
           <label>Email</label>
-          <input class="editEmail" value="${m.email}" type="email">
+          <input class="editEmail" value="${m.email || ""}" type="email">
         </div>
         <div id="roleManagedMsg-${m.id}" class="error"></div>
         <div class="edit-actions">
           <button class="saveRoleManagedBtn icon-btn btn-edit" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Shrani</button>
-          ${!m.activated ? `<button class="resendInviteRoleManagedBtn icon-btn btn-edit" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Ponovno pošlji vabilo</button>` : ""}
+          ${(!m.activated && m.email) ? `<button class="resendInviteRoleManagedBtn icon-btn btn-edit" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Ponovno pošlji vabilo</button>` : ""}
           <button class="cancelRoleManagedEditBtn secondary-btn" data-id="${m.id}">Prekliči</button>
         </div>
       </div>
@@ -791,8 +795,8 @@ function renderOrgMembersList() {
 
       msg.innerText = "";
 
-      if (!first_name || !last_name || !email) {
-        msg.innerText = "Izpolni vsa polja";
+      if (!first_name || !last_name) {
+        msg.innerText = "Izpolni ime in priimek";
         return;
       }
 
@@ -825,11 +829,13 @@ function renderOrgMember(m) {
   const canManage = currentUserRole === "ADMIN";
   const nameHtml = `<a href="#" class="member-name-link" data-id="${m.id}">${m.first_name} ${m.last_name}</a>`;
   const inactiveNote = m.is_active ? "" : " (deaktiviran)";
+  const emailNote = m.email ? ` — ${m.email}` : " — brez emaila";
+  const statusNote = m.activated ? "" : (m.email ? " (čaka aktivacijo)" : " (ni registriran)");
 
   return `
     <li class="member-item${m.is_active ? "" : " member-inactive"}" data-id="${m.id}">
       <div class="member-row">
-        <span>${nameHtml} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}${inactiveNote}</span>
+        <span>${nameHtml}${emailNote}${statusNote}${inactiveNote}</span>
         <div class="actions">
           <span class="status-badge">${roleLabel(m.role)}</span>
           ${canManage ? `<button class="editMemberBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>` : ""}
@@ -847,7 +853,7 @@ function renderOrgMember(m) {
         </div>
         <div class="field">
           <label>Email</label>
-          <input class="editEmail" value="${m.email}" type="email">
+          <input class="editEmail" value="${m.email || ""}" type="email">
         </div>
         ${!isSelf ? `
         <div class="field">
@@ -856,13 +862,14 @@ function renderOrgMember(m) {
             <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>${roleLabel("MEMBER")}</option>
             <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>${roleLabel("SUPERINTENDENT")}</option>
             <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>${roleLabel("ADMIN")}</option>
+            <option value="PUBLIC" ${m.role === "PUBLIC" ? "selected" : ""}>${roleLabel("PUBLIC")}</option>
           </select>
         </div>
         ` : ""}
         <div id="editMemberMsg-${m.id}" class="error"></div>
         <div class="edit-actions">
           <button class="saveMemberBtn icon-btn btn-edit" data-id="${m.id}">Shrani</button>
-          ${!m.activated ? `<button class="resendInviteBtn icon-btn btn-edit" data-id="${m.id}">Ponovno pošlji vabilo</button>` : ""}
+          ${(!m.activated && m.email) ? `<button class="resendInviteBtn icon-btn btn-edit" data-id="${m.id}">Ponovno pošlji vabilo</button>` : ""}
           ${!isSelf ? (m.is_active
             ? `<button class="deactivateMemberBtn icon-btn btn-reject" data-id="${m.id}">Deaktiviraj</button>`
             : `<button class="activateMemberBtn icon-btn btn-approve" data-id="${m.id}">Aktiviraj</button>`
@@ -879,6 +886,7 @@ document.getElementById("inviteUserBtn")?.addEventListener("click", async () => 
   const first_name = document.getElementById("inviteFirst").value.trim();
   const last_name = document.getElementById("inviteLast").value.trim();
   const email = document.getElementById("inviteEmail").value.trim();
+  const role = document.getElementById("invitePublicKiosk")?.checked ? "PUBLIC" : "MEMBER";
   const msg = document.getElementById("inviteMsg");
 
   msg.innerText = "";
@@ -893,7 +901,7 @@ document.getElementById("inviteUserBtn")?.addEventListener("click", async () => 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ first_name, last_name, email })
+    body: JSON.stringify({ first_name, last_name, email, role })
   });
 
   const data = await res.json();
@@ -909,6 +917,59 @@ document.getElementById("inviteUserBtn")?.addEventListener("click", async () => 
   document.getElementById("inviteFirst").value = "";
   document.getElementById("inviteLast").value = "";
   document.getElementById("inviteEmail").value = "";
+  if (document.getElementById("invitePublicKiosk")) document.getElementById("invitePublicKiosk").checked = false;
+
+  loadOrgMembers();
+});
+
+document.getElementById("rosterAddBtn")?.addEventListener("click", async () => {
+  const raw = document.getElementById("rosterAddText").value.trim();
+  const msg = document.getElementById("rosterAddMsg");
+
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!raw) {
+    msg.innerText = "Vnesi vsaj eno osebo";
+    return;
+  }
+
+  const entries = raw.split("\n")
+    .map(line => {
+      const parts = line.trim().split(/\s+/);
+      const last_name = parts.pop() || "";
+      const first_name = parts.join(" ");
+      return { first_name, last_name };
+    })
+    .filter(e => e.first_name && e.last_name);
+
+  if (!entries.length) {
+    msg.innerText = "Vsaka vrstica naj vsebuje ime in priimek";
+    return;
+  }
+
+  const res = await fetch("/api/admin/users/roster", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ entries })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  const okCount = data.results.filter(r => r.ok).length;
+  const failed = data.results.filter(r => !r.ok);
+
+  msg.style.color = failed.length ? "" : "#16a34a";
+  msg.innerText = `Dodanih: ${okCount}/${data.results.length}` +
+    (failed.length ? ` — napake: ${failed.map(f => `${f.first_name} ${f.last_name} (${f.message})`).join(", ")}` : "");
+
+  document.getElementById("rosterAddText").value = "";
 
   loadOrgMembers();
 });
@@ -1293,10 +1354,84 @@ async function loadOrgSettingsView() {
     document.getElementById("orgLogoImg").src = org.logo_path || "logo.png";
     document.getElementById("orgHourRounding").value = org.hour_rounding_minutes || 1;
     document.getElementById("orgHourDisplayFormat").value = org.hour_display_format || "DECIMAL";
+
+    currentOrgSettings = org;
+    document.getElementById("joinCodeUrl").value = `${window.location.origin}/join.html?code=${org.join_code || ""}`;
+    document.getElementById("registrationEnabledToggle").checked = !!org.registration_enabled;
   }
 
   loadOfficials();
 }
+
+let currentOrgSettings = {};
+
+document.getElementById("copyJoinCodeBtn")?.addEventListener("click", async () => {
+  const input = document.getElementById("joinCodeUrl");
+  const msg = document.getElementById("joinCodeMsg");
+
+  try {
+    await navigator.clipboard.writeText(input.value);
+    msg.style.color = "#16a34a";
+    msg.innerText = "Povezava kopirana";
+  } catch (err) {
+    input.select();
+    msg.innerText = "Kopiraj ročno (Ctrl+C)";
+  }
+});
+
+document.getElementById("registrationEnabledToggle")?.addEventListener("change", async (e) => {
+  const msg = document.getElementById("joinCodeMsg");
+  msg.innerText = "";
+  msg.style.color = "";
+
+  const res = await fetch("/api/admin/organization", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      name: currentOrgSettings.name,
+      description: currentOrgSettings.description,
+      hour_rounding_minutes: currentOrgSettings.hour_rounding_minutes,
+      hour_display_format: currentOrgSettings.hour_display_format,
+      registration_enabled: e.target.checked
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    e.target.checked = !e.target.checked;
+    return;
+  }
+
+  currentOrgSettings.registration_enabled = e.target.checked ? 1 : 0;
+});
+
+document.getElementById("regenerateJoinCodeBtn")?.addEventListener("click", async () => {
+  const msg = document.getElementById("joinCodeMsg");
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!confirm("Stara registracijska povezava bo prenehala delovati. Nadaljuješ?")) return;
+
+  const res = await fetch("/api/admin/organization/join-code/regenerate", {
+    method: "POST",
+    credentials: "include"
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  currentOrgSettings.join_code = data.join_code;
+  document.getElementById("joinCodeUrl").value = `${window.location.origin}/join.html?code=${data.join_code}`;
+  msg.style.color = "#16a34a";
+  msg.innerText = "Nova povezava ustvarjena";
+});
 
 document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async () => {
   const name = document.getElementById("orgSettingsName").value.trim();
@@ -1313,11 +1448,13 @@ document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async (
     return;
   }
 
+  const registration_enabled = document.getElementById("registrationEnabledToggle")?.checked ?? true;
+
   const res = await fetch("/api/admin/organization", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ name, description, hour_rounding_minutes, hour_display_format })
+    body: JSON.stringify({ name, description, hour_rounding_minutes, hour_display_format, registration_enabled })
   });
 
   const data = await res.json();
@@ -1329,6 +1466,10 @@ document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async (
 
   msg.style.color = "#16a34a";
   msg.innerText = data.message;
+  currentOrgSettings.name = name;
+  currentOrgSettings.description = description;
+  currentOrgSettings.hour_rounding_minutes = hour_rounding_minutes;
+  currentOrgSettings.hour_display_format = hour_display_format;
 
   loadOrgHourSettings();
 });
@@ -2478,7 +2619,7 @@ async function openMemberDetail(userId) {
 
   document.getElementById("memberDetailFirstName").innerText = m.first_name;
   document.getElementById("memberDetailLastName").innerText = m.last_name;
-  document.getElementById("memberDetailEmail").innerText = m.email;
+  document.getElementById("memberDetailEmail").innerText = m.email || "brez emaila";
   document.getElementById("memberDetailRole").innerText = roleLabel(m.role);
   document.getElementById("memberDetailAvatarImg").src = m.avatar_path || "logo.png";
 

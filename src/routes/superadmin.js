@@ -167,14 +167,12 @@ router.put("/organizations/:id/users/:userId", async (req, res) => {
   try {
     const { first_name, last_name, email } = req.body;
 
-    if (!first_name || !last_name || !email) {
+    if (!first_name || !last_name) {
       return res.status(400).json({ message: "Manjkajo podatki" });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-
     const rows = await db.query(
-      "SELECT id FROM users WHERE id = ? AND organization_id = ?",
+      "SELECT id, password_hash FROM users WHERE id = ? AND organization_id = ?",
       [req.params.userId, req.params.id]
     );
 
@@ -182,13 +180,21 @@ router.put("/organizations/:id/users/:userId", async (req, res) => {
       return res.status(404).json({ message: "Uporabnik ni najden" });
     }
 
-    const emailTaken = await db.query(
-      "SELECT id FROM users WHERE email = ? AND id != ?",
-      [cleanEmail, req.params.userId]
-    );
+    const cleanEmail = (email || "").trim().toLowerCase() || null;
 
-    if (emailTaken.length) {
-      return res.status(400).json({ message: "Email je že uporabljen" });
+    if (!cleanEmail && rows[0].password_hash) {
+      return res.status(400).json({ message: "Email je obvezen za aktiviran račun" });
+    }
+
+    if (cleanEmail) {
+      const emailTaken = await db.query(
+        "SELECT id FROM users WHERE email = ? AND id != ?",
+        [cleanEmail, req.params.userId]
+      );
+
+      if (emailTaken.length) {
+        return res.status(400).json({ message: "Email je že uporabljen" });
+      }
     }
 
     await db.query(
@@ -223,6 +229,10 @@ router.post("/organizations/:id/users/:userId/resend-invite", async (req, res) =
       return res.status(400).json({ message: "Uporabnik je že aktiviral račun" });
     }
 
+    if (!user.email) {
+      return res.status(400).json({ message: "Član nima nastavljenega emaila" });
+    }
+
     await issueAndSendInvite(user.id, user.email);
 
     res.json({ message: "Vabilo ponovno poslano (glej strežniške loge za povezavo)" });
@@ -238,7 +248,7 @@ router.post("/organizations/:id/users/:userId/resend-invite", async (req, res) =
 router.post("/organizations/:id/users/:userId/role", async (req, res) => {
   try {
     const { role } = req.body;
-    const allowedRoles = ["ADMIN", "SUPERINTENDENT", "MEMBER"];
+    const allowedRoles = ["ADMIN", "SUPERINTENDENT", "MEMBER", "PUBLIC"];
 
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: "Neveljavna vloga" });

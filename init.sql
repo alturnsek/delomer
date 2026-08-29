@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS organizations (
   name VARCHAR(255) NOT NULL,
   logo_path VARCHAR(255) NULL,
   description TEXT NULL,
+  join_code VARCHAR(32) NULL UNIQUE,
+  registration_enabled TINYINT(1) NOT NULL DEFAULT 1,
   hour_rounding_minutes INT NOT NULL DEFAULT 1,
   hour_display_format ENUM('DECIMAL','WHOLE','DHM') NOT NULL DEFAULT 'DECIMAL',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -34,9 +36,9 @@ INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES ('email_mode
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NULL,
-  role ENUM('SUPER_ADMIN','ADMIN','SUPERINTENDENT','MEMBER') NOT NULL DEFAULT 'MEMBER',
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL DEFAULT '', -- prazno = račun še ni aktiviran (čaka na nastavitev gesla) ali social login
+  role ENUM('SUPER_ADMIN','ADMIN','SUPERINTENDENT','MEMBER','PUBLIC') NOT NULL DEFAULT 'MEMBER',
+  email VARCHAR(255) NULL UNIQUE, -- NULL = član brez računa (samo na seznamu)
+  password_hash VARCHAR(255) NOT NULL DEFAULT '', -- prazno = račun še ni aktiviran (čaka na vabilo/samopostrežno registracijo) ali social login
   first_name VARCHAR(100) NOT NULL DEFAULT '',
   last_name VARCHAR(100) NOT NULL DEFAULT '',
   invite_token VARCHAR(255) NULL,
