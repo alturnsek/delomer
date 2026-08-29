@@ -1083,6 +1083,12 @@ function formatParticipant(p, defaultMinutes) {
   return `${p.first_name} ${p.last_name} (${(minutes / 60).toFixed(2)} h)`;
 }
 
+function formatDateDisplay(dateStr) {
+  const d = new Date(dateStr);
+  const pad = n => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
 function renderAdminWorkItem(w) {
   const hours = (w.minutes / 60).toFixed(2);
   const participants = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
@@ -1094,7 +1100,7 @@ function renderAdminWorkItem(w) {
     <li class="admin-work-item" data-id="${w.id}">
       <div class="member-row">
         <span>
-          <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
+          <strong>${formatDateDisplay(w.started_at)}</strong> · <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
           <span class="status-badge status-${w.status}">${statusLabel(w.status)}</span>${correctedBadge}<br>
           <small>${w.category_name || "brez kategorije"} · ${hours} h · sodelavci: ${participants || "-"}</small>
           ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog: ${w.rejection_reason}</small>` : ""}
