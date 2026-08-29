@@ -60,6 +60,13 @@ function memberCountLabel(n) {
 }
 
 /* =========================
+  IKONE ZA UREJANJE/BRISANJE (SVG namesto emoji - emoji ✏️/❌ sta pisano-barvna
+  in ne prevzameta bele barve besedila na obarvanem gumbu, SVG s fill="currentColor" jo)
+========================= */
+const ICON_EDIT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
+const ICON_DELETE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+
+/* =========================
   STILIZIRAN POTRDITVENI POPUP (namesto brskalnikovega confirm())
 ========================= */
 function showConfirmModal(message, onConfirm, confirmLabel) {
@@ -430,7 +437,7 @@ function renderOrganization(o) {
     <li class="org-item" data-id="${o.id}">
       <div class="member-row">
         <span>${o.name} — ${memberCountLabel(o.member_count)}</span>
-        <button class="editOrgBtn icon-btn btn-edit" data-id="${o.id}">✏️</button>
+        <button class="editOrgBtn icon-btn btn-edit" data-id="${o.id}">${ICON_EDIT}</button>
       </div>
       <div class="edit-panel hidden" id="orgEdit-${o.id}">
         <div class="field">
@@ -789,7 +796,7 @@ function renderRoleManagedMember(m, roleEndpointBase) {
             <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>${roleLabel("ADMIN")}</option>
             <option value="PUBLIC" ${m.role === "PUBLIC" ? "selected" : ""}>${roleLabel("PUBLIC")}</option>
           </select>
-          <button class="editRoleManagedBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>
+          <button class="editRoleManagedBtn icon-btn btn-edit" data-id="${m.id}">${ICON_EDIT}</button>
         </div>
       </div>
       <div class="edit-panel hidden" id="roleManagedEdit-${m.id}">
@@ -1008,7 +1015,7 @@ function renderOrgMember(m) {
         <span>${nameHtml}${emailNote}${statusNote}${inactiveNote}</span>
         <div class="actions">
           <span class="status-badge">${roleLabel(m.role)}</span>
-          ${canManage ? `<button class="editMemberBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>` : ""}
+          ${canManage ? `<button class="editMemberBtn icon-btn btn-edit" data-id="${m.id}">${ICON_EDIT}</button>` : ""}
         </div>
       </div>
       ${canManage ? `
@@ -1222,7 +1229,7 @@ async function loadCategoriesAdmin() {
           <div class="member-row">
             <span>${c.name} ${c.is_active ? "" : '<span class="status-badge status-REJECTED">neaktivna</span>'}</span>
             <div class="actions">
-              <button class="editCategoryBtn icon-btn btn-edit" data-id="${c.id}">✏️</button>
+              <button class="editCategoryBtn icon-btn btn-edit" data-id="${c.id}">${ICON_EDIT}</button>
               ${c.is_active
                 ? `<button class="deactivateCategoryBtn" data-id="${c.id}">Deaktiviraj</button>`
                 : `<button class="activateCategoryBtn" data-id="${c.id}">Aktiviraj</button>`}
@@ -1421,8 +1428,8 @@ async function loadTeamList() {
         <li>
           <span>${t.name} (${memberCountLabel(t.member_ids.length)})</span>
           <div class="actions">
-            <button class="editTeamBtn" data-id="${t.id}">✏️</button>
-            <button class="deleteTeamBtn" data-id="${t.id}">❌</button>
+            <button class="editTeamBtn icon-btn btn-edit" data-id="${t.id}">${ICON_EDIT}</button>
+            <button class="deleteTeamBtn icon-btn btn-reject" data-id="${t.id}">${ICON_DELETE}</button>
           </div>
         </li>
       `).join("")
@@ -1743,8 +1750,8 @@ function renderOfficial(o) {
           ${contacts.length ? `<br><small>${contacts.join(" · ")}</small>` : ""}
         </span>
         <div class="actions">
-          <button class="editOfficialBtn icon-btn btn-edit" data-id="${o.id}">✏️</button>
-          <button class="deleteOfficialBtn" data-id="${o.id}">❌</button>
+          <button class="editOfficialBtn icon-btn btn-edit" data-id="${o.id}">${ICON_EDIT}</button>
+          <button class="deleteOfficialBtn icon-btn btn-reject" data-id="${o.id}">${ICON_DELETE}</button>
         </div>
       </div>
     </li>
@@ -2157,8 +2164,8 @@ async function loadWork() {
       <div class="actions">
         <strong>${hours}</strong>
         ${isOwner && !isLocked ? `
-          <button class="editBtn icon-btn" data-id="${w.id}">✏️</button>
-          <button class="deleteBtn" data-id="${w.id}">❌</button>
+          <button class="editBtn icon-btn btn-edit" data-id="${w.id}">${ICON_EDIT}</button>
+          <button class="deleteBtn icon-btn btn-reject" data-id="${w.id}">${ICON_DELETE}</button>
         ` : ""}
       </div>
     `;
