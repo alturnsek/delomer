@@ -57,6 +57,7 @@
     <nav id="sidebar" class="sidebar hidden">
       <a href="#" class="nav-link" data-view="work" data-roles="ADMIN,SUPERINTENDENT,MEMBER">Vnos dela</a>
       <a href="#" class="nav-link" data-view="members" data-roles="ADMIN,SUPERINTENDENT">Člani</a>
+      <a href="#" class="nav-link" data-view="org-settings" data-roles="ADMIN">Nastavitve društva</a>
       <a href="#" class="nav-link" data-view="categories" data-roles="ADMIN,SUPERINTENDENT">Kategorije</a>
       <a href="#" class="nav-link" data-view="teams" data-roles="ADMIN,SUPERINTENDENT">Ekipe</a>
       <a href="#" class="nav-link" data-view="approvals" data-roles="ADMIN,SUPERINTENDENT">Potrjevanje dela</a>
@@ -266,6 +267,53 @@
             <div id="teamMsg" class="error"></div>
           </div>
         </div>
+      </section>
+
+      <!-- NASTAVITVE DRUŠTVA -->
+      <section id="view-org-settings" class="view hidden">
+        <h2>Nastavitve društva</h2>
+
+        <div class="profile-card">
+          <div class="profile-avatar-wrap">
+            <img id="orgLogoImg" src="logo.png" alt="Logotip društva" class="profile-avatar">
+            <label class="icon-btn btn-edit avatar-upload-label">
+              Spremeni logotip
+              <input type="file" id="orgLogoInput" accept="image/*" class="hidden-file-input">
+            </label>
+            <div id="orgLogoMsg" class="error"></div>
+          </div>
+
+          <div class="profile-info">
+            <div class="field">
+              <label>Ime društva</label>
+              <input id="orgSettingsName">
+            </div>
+            <div class="field">
+              <label>Opis</label>
+              <textarea id="orgSettingsDescription" rows="4"></textarea>
+            </div>
+            <div id="orgSettingsMsg" class="error"></div>
+            <button id="saveOrgSettingsBtn" class="icon-btn btn-edit">Shrani</button>
+          </div>
+        </div>
+
+        <h2>Funkcionarji</h2>
+
+        <div class="work-form">
+          <input id="officialFirstName" placeholder="Ime">
+          <input id="officialLastName" placeholder="Priimek">
+          <input id="officialTitle" placeholder="Funkcija (npr. Predsednik)">
+          <input id="officialPhone" placeholder="Telefon (neobvezno)">
+          <input id="officialEmail" type="email" placeholder="Email (neobvezno)">
+          <input id="officialWhatsapp" placeholder="WhatsApp (neobvezno)">
+          <input id="officialViber" placeholder="Viber (neobvezno)">
+          <input id="officialTelegram" placeholder="Telegram (neobvezno)">
+          <button id="saveOfficialBtn">Dodaj funkcionarja</button>
+          <button id="cancelOfficialEditBtn" class="hidden secondary-btn">Prekliči urejanje</button>
+          <div id="officialMsg" class="error"></div>
+        </div>
+
+        <ul id="officialsList"></ul>
       </section>
 
       <!-- POTRJEVANJE DELA -->
@@ -499,14 +547,13 @@
         <div class="profile-card">
           <div class="profile-avatar-wrap">
             <img id="profileAvatarImg" src="logo.png" alt="Profilna slika" class="profile-avatar">
-            <label class="icon-btn btn-edit avatar-upload-label">
-              Spremeni sliko
-              <input type="file" id="avatarInput" accept="image/*" class="hidden-file-input">
-            </label>
-            <div id="avatarMsg" class="error"></div>
           </div>
 
           <div class="profile-info">
+            <div class="member-row">
+              <h3 style="margin:0;">Osebni podatki</h3>
+              <button id="profileSettingsBtn" class="icon-btn btn-edit" title="Nastavitve">⚙️</button>
+            </div>
             <div class="field">
               <label>Ime</label>
               <div id="profileFirstName" class="profile-value"></div>
@@ -524,6 +571,39 @@
               <div id="profileOrg" class="profile-value"></div>
             </div>
           </div>
+        </div>
+
+        <div class="edit-panel hidden" id="profileSettingsPanel">
+          <h3>Profilna slika</h3>
+          <label class="icon-btn btn-edit avatar-upload-label">
+            Izberi novo sliko
+            <input type="file" id="avatarInput" accept="image/*" class="hidden-file-input">
+          </label>
+          <div id="avatarMsg" class="error"></div>
+
+          <h3>Spremeni geslo</h3>
+          <div class="field">
+            <label>Trenutno geslo</label>
+            <input type="password" id="oldPasswordInput">
+          </div>
+          <div class="field">
+            <label>Novo geslo</label>
+            <input type="password" id="newPasswordInput">
+          </div>
+          <div class="field">
+            <label>Ponovi novo geslo</label>
+            <input type="password" id="confirmPasswordInput">
+          </div>
+          <div id="passwordChangeMsg" class="error"></div>
+          <button id="savePasswordBtn" class="icon-btn btn-edit">Shrani geslo</button>
+
+          <h3>Spremeni email</h3>
+          <div class="field">
+            <label>Nov email</label>
+            <input type="email" id="newEmailInput">
+          </div>
+          <div id="emailChangeMsg" class="error"></div>
+          <button id="saveEmailBtn" class="icon-btn btn-edit">Shrani email</button>
         </div>
 
         <h2>Statistika dela</h2>

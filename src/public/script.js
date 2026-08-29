@@ -67,6 +67,7 @@ const VIEW_LOADERS = {
   members: () => loadOrgMembers(),
   categories: () => loadCategoriesAdmin(),
   teams: () => loadTeamsView(),
+  "org-settings": () => loadOrgSettingsView(),
   approvals: () => loadAdminWork(),
   "org-stats": () => loadOrgStatsView(),
   organizations: () => { loadEmailModeSetting(); loadOrganizationsSuperadmin(); },
@@ -1234,6 +1235,214 @@ function resetTeamForm() {
 
 
 /* =========================
+  NASTAVITVE DRUŠTVA (logotip, ime, opis, funkcionarji) - ADMIN
+========================= */
+async function loadOrgSettingsView() {
+  const res = await fetch("/api/admin/organization", { credentials: "include" });
+
+  if (res.ok) {
+    const org = await res.json();
+
+    document.getElementById("orgSettingsName").value = org.name || "";
+    document.getElementById("orgSettingsDescription").value = org.description || "";
+    document.getElementById("orgLogoImg").src = org.logo_path || "logo.png";
+  }
+
+  loadOfficials();
+}
+
+document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async () => {
+  const name = document.getElementById("orgSettingsName").value.trim();
+  const description = document.getElementById("orgSettingsDescription").value.trim();
+  const msg = document.getElementById("orgSettingsMsg");
+
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!name) {
+    msg.innerText = "Vnesi ime društva";
+    return;
+  }
+
+  const res = await fetch("/api/admin/organization", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ name, description })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  msg.style.color = "#16a34a";
+  msg.innerText = data.message;
+});
+
+document.getElementById("orgLogoInput")?.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  const msg = document.getElementById("orgLogoMsg");
+
+  msg.innerText = "";
+
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("logo", file);
+
+  const res = await fetch("/api/admin/organization/logo", {
+    method: "POST",
+    credentials: "include",
+    body: formData
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka pri nalaganju logotipa";
+    return;
+  }
+
+  document.getElementById("orgLogoImg").src = data.logo_path;
+});
+
+
+/* =========================
+  FUNKCIONARJI DRUŠTVA
+========================= */
+let editingOfficialId = null;
+
+async function loadOfficials() {
+  const list = document.getElementById("officialsList");
+  if (!list) return;
+
+  const res = await fetch("/api/admin/officials", { credentials: "include" });
+  if (!res.ok) return;
+
+  const officials = await res.json();
+
+  list.innerHTML = officials.length
+    ? officials.map(renderOfficial).join("")
+    : "<li>Ni še funkcionarjev</li>";
+
+  document.querySelectorAll(".editOfficialBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const official = officials.find(o => o.id == btn.dataset.id);
+      if (!official) return;
+
+      editingOfficialId = official.id;
+
+      document.getElementById("officialFirstName").value = official.first_name;
+      document.getElementById("officialLastName").value = official.last_name;
+      document.getElementById("officialTitle").value = official.title;
+      document.getElementById("officialPhone").value = official.phone || "";
+      document.getElementById("officialEmail").value = official.email || "";
+      document.getElementById("officialWhatsapp").value = official.whatsapp || "";
+      document.getElementById("officialViber").value = official.viber || "";
+      document.getElementById("officialTelegram").value = official.telegram || "";
+
+      document.getElementById("saveOfficialBtn").innerText = "Posodobi funkcionarja";
+      document.getElementById("cancelOfficialEditBtn").classList.remove("hidden");
+    });
+  });
+
+  document.querySelectorAll(".deleteOfficialBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Izbriši tega funkcionarja?")) return;
+
+      await fetch(`/api/admin/officials/${btn.dataset.id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+
+      loadOfficials();
+    });
+  });
+}
+
+function renderOfficial(o) {
+  const contacts = [];
+  if (o.phone) contacts.push(`Tel: ${o.phone}`);
+  if (o.email) contacts.push(`Email: ${o.email}`);
+  if (o.whatsapp) contacts.push(`WhatsApp: ${o.whatsapp}`);
+  if (o.viber) contacts.push(`Viber: ${o.viber}`);
+  if (o.telegram) contacts.push(`Telegram: ${o.telegram}`);
+
+  return `
+    <li class="official-item" data-id="${o.id}">
+      <div class="member-row">
+        <span>
+          <strong>${o.first_name} ${o.last_name}</strong> — ${o.title}
+          ${contacts.length ? `<br><small>${contacts.join(" · ")}</small>` : ""}
+        </span>
+        <div class="actions">
+          <button class="editOfficialBtn icon-btn btn-edit" data-id="${o.id}">✏️</button>
+          <button class="deleteOfficialBtn" data-id="${o.id}">❌</button>
+        </div>
+      </div>
+    </li>
+  `;
+}
+
+function resetOfficialForm() {
+  editingOfficialId = null;
+
+  ["officialFirstName", "officialLastName", "officialTitle", "officialPhone", "officialEmail", "officialWhatsapp", "officialViber", "officialTelegram"]
+    .forEach(id => { document.getElementById(id).value = ""; });
+
+  document.getElementById("saveOfficialBtn").innerText = "Dodaj funkcionarja";
+  document.getElementById("cancelOfficialEditBtn").classList.add("hidden");
+  document.getElementById("officialMsg").innerText = "";
+}
+
+document.getElementById("cancelOfficialEditBtn")?.addEventListener("click", resetOfficialForm);
+
+document.getElementById("saveOfficialBtn")?.addEventListener("click", async () => {
+  const msg = document.getElementById("officialMsg");
+  msg.innerText = "";
+
+  const payload = {
+    first_name: document.getElementById("officialFirstName").value.trim(),
+    last_name: document.getElementById("officialLastName").value.trim(),
+    title: document.getElementById("officialTitle").value.trim(),
+    phone: document.getElementById("officialPhone").value.trim(),
+    email: document.getElementById("officialEmail").value.trim(),
+    whatsapp: document.getElementById("officialWhatsapp").value.trim(),
+    viber: document.getElementById("officialViber").value.trim(),
+    telegram: document.getElementById("officialTelegram").value.trim()
+  };
+
+  if (!payload.first_name || !payload.last_name || !payload.title) {
+    msg.innerText = "Ime, priimek in funkcija so obvezni";
+    return;
+  }
+
+  const url = editingOfficialId ? `/api/admin/officials/${editingOfficialId}` : "/api/admin/officials";
+  const method = editingOfficialId ? "PUT" : "POST";
+
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  resetOfficialForm();
+  loadOfficials();
+});
+
+
+/* =========================
   SODELAVCI PRI VNOSU DELA (iskanje, sortiranje, ekipe, override ur)
 ========================= */
 async function loadParticipantOptions() {
@@ -2101,6 +2310,83 @@ document.getElementById("avatarInput")?.addEventListener("change", async (e) => 
   }
 
   document.getElementById("profileAvatarImg").src = data.avatar_path;
+});
+
+document.getElementById("profileSettingsBtn")?.addEventListener("click", () => {
+  document.getElementById("profileSettingsPanel")?.classList.toggle("hidden");
+});
+
+document.getElementById("savePasswordBtn")?.addEventListener("click", async () => {
+  const old_password = document.getElementById("oldPasswordInput").value;
+  const new_password = document.getElementById("newPasswordInput").value;
+  const confirm_password = document.getElementById("confirmPasswordInput").value;
+  const msg = document.getElementById("passwordChangeMsg");
+
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!old_password || !new_password || !confirm_password) {
+    msg.innerText = "Izpolni vsa polja";
+    return;
+  }
+
+  if (new_password !== confirm_password) {
+    msg.innerText = "Novi gesli se ne ujemata";
+    return;
+  }
+
+  const res = await fetch("/api/users/me/password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ old_password, new_password })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  msg.style.color = "#16a34a";
+  msg.innerText = data.message;
+
+  document.getElementById("oldPasswordInput").value = "";
+  document.getElementById("newPasswordInput").value = "";
+  document.getElementById("confirmPasswordInput").value = "";
+});
+
+document.getElementById("saveEmailBtn")?.addEventListener("click", async () => {
+  const email = document.getElementById("newEmailInput").value.trim();
+  const msg = document.getElementById("emailChangeMsg");
+
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!email) {
+    msg.innerText = "Vnesi email";
+    return;
+  }
+
+  const res = await fetch("/api/users/me/email", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  msg.style.color = "#16a34a";
+  msg.innerText = data.message;
+  document.getElementById("profileEmail").innerText = email;
+  document.getElementById("newEmailInput").value = "";
 });
 
 

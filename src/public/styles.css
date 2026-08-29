@@ -330,7 +330,8 @@ code {
 
 #categoryList .category-item,
 #orgList .org-item,
-#orgAdminsList .member-item {
+#orgAdminsList .member-item,
+#officialsList .official-item {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -791,7 +792,8 @@ button:hover {
 #orgAdminsList,
 #teamList,
 #orgStatsByUserList,
-#platformStatsByOrgList {
+#platformStatsByOrgList,
+#officialsList {
   list-style: none;
   padding: 0;
 }
@@ -804,7 +806,8 @@ button:hover {
 #orgAdminsList li,
 #teamList li,
 #orgStatsByUserList li,
-#platformStatsByOrgList li {
+#platformStatsByOrgList li,
+#officialsList li {
   background: white;
   padding: 15px;
   margin-bottom: 10px;

@@ -179,6 +179,64 @@ router.get("/me", (req, res) => {
 
 
 /* =========================
+  SPREMENI GESLO
+========================= */
+router.post("/me/password", requireAuth, async (req, res) => {
+  try {
+    const { old_password, new_password } = req.body;
+
+    if (!old_password || !new_password) {
+      return res.status(400).json({ message: "Izpolni vsa polja" });
+    }
+
+    const rows = await db.query("SELECT password_hash FROM users WHERE id = ?", [req.user.id]);
+    const user = rows[0];
+
+    const match = user?.password_hash && await bcrypt.compare(old_password, user.password_hash);
+
+    if (!match) {
+      return res.status(400).json({ message: "Napačno trenutno geslo" });
+    }
+
+    const password_hash = await bcrypt.hash(new_password, 10);
+
+    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [password_hash, req.user.id]);
+
+    res.json({ message: "Geslo posodobljeno" });
+  } catch (err) {
+    console.error("CHANGE PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  SPREMENI EMAIL
+========================= */
+router.put("/me/email", requireAuth, async (req, res) => {
+  try {
+    const email = (req.body.email || "").trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ message: "Vnesi email" });
+    }
+
+    const existing = await db.query("SELECT id FROM users WHERE email = ? AND id != ?", [email, req.user.id]);
+
+    if (existing.length) {
+      return res.status(400).json({ message: "Email je že uporabljen" });
+    }
+
+    await db.query("UPDATE users SET email = ? WHERE id = ?", [email, req.user.id]);
+
+    res.json({ message: "Email posodobljen" });
+  } catch (err) {
+    console.error("CHANGE EMAIL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
   PROFILNA SLIKA
 ========================= */
 router.post("/me/avatar", requireAuth, (req, res, next) => {

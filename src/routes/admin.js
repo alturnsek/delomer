@@ -1,8 +1,11 @@
 const express = require("express");
+const path = require("path");
+const fs = require("fs");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
 const { createInviteToken, sendInviteEmail, issueAndSendInvite } = require("../utils/invites");
 const { serializeRow, attachParticipants, resolveOrgParticipants, saveParticipants } = require("../utils/workLogs");
+const { uploadLogo } = require("../middleware/upload");
 
 const router = express.Router();
 
@@ -732,6 +735,181 @@ router.get("/stats", async (req, res) => {
     res.json({ byDate, byUser, totalMinutes });
   } catch (err) {
     console.error("GET ORG STATS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  NASTAVITVE DRUŠTVA (ime, opis, logotip) - samo ADMIN
+========================= */
+router.get("/organization", canManageUsers, async (req, res) => {
+  try {
+    const rows = await db.query(
+      "SELECT id, name, description, logo_path FROM organizations WHERE id = ?",
+      [req.user.organization_id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Društvo ni najdeno" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("GET ORGANIZATION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/organization", canManageUsers, async (req, res) => {
+  try {
+    const name = (req.body.name || "").trim();
+    const description = (req.body.description || "").trim();
+
+    if (!name) {
+      return res.status(400).json({ message: "Vnesi ime društva" });
+    }
+
+    await db.query(
+      "UPDATE organizations SET name = ?, description = ? WHERE id = ?",
+      [name, description || null, req.user.organization_id]
+    );
+
+    res.json({ message: "Društvo posodobljeno" });
+  } catch (err) {
+    console.error("UPDATE ORGANIZATION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/organization/logo", canManageUsers, (req, res, next) => {
+  uploadLogo.single("logo")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message || "Napaka pri nalaganju datoteke" });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Manjka datoteka" });
+    }
+
+    const relativePath = `/uploads/logos/${req.file.filename}`;
+
+    const rows = await db.query("SELECT logo_path FROM organizations WHERE id = ?", [req.user.organization_id]);
+    const oldPath = rows[0]?.logo_path;
+
+    await db.query("UPDATE organizations SET logo_path = ? WHERE id = ?", [relativePath, req.user.organization_id]);
+
+    if (oldPath) {
+      fs.unlink(path.join(__dirname, "..", "..", oldPath), () => {});
+    }
+
+    res.json({ message: "Logotip naložen", logo_path: relativePath });
+  } catch (err) {
+    console.error("LOGO UPLOAD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  FUNKCIONARJI DRUŠTVA - samo ADMIN
+========================= */
+router.get("/officials", canManageUsers, async (req, res) => {
+  try {
+    const rows = await db.query(
+      `SELECT id, first_name, last_name, title, phone, email, whatsapp, viber, telegram
+       FROM organization_officials
+       WHERE organization_id = ?
+       ORDER BY sort_order ASC, id ASC`,
+      [req.user.organization_id]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("LIST OFFICIALS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+function cleanOptional(value) {
+  const trimmed = (value || "").trim();
+  return trimmed || null;
+}
+
+router.post("/officials", canManageUsers, async (req, res) => {
+  try {
+    const first_name = (req.body.first_name || "").trim();
+    const last_name = (req.body.last_name || "").trim();
+    const title = (req.body.title || "").trim();
+
+    if (!first_name || !last_name || !title) {
+      return res.status(400).json({ message: "Ime, priimek in funkcija so obvezni" });
+    }
+
+    await db.query(
+      `INSERT INTO organization_officials
+         (organization_id, first_name, last_name, title, phone, email, whatsapp, viber, telegram)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.organization_id, first_name, last_name, title,
+        cleanOptional(req.body.phone), cleanOptional(req.body.email),
+        cleanOptional(req.body.whatsapp), cleanOptional(req.body.viber), cleanOptional(req.body.telegram)
+      ]
+    );
+
+    res.json({ message: "Funkcionar dodan" });
+  } catch (err) {
+    console.error("CREATE OFFICIAL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/officials/:id", canManageUsers, async (req, res) => {
+  try {
+    const first_name = (req.body.first_name || "").trim();
+    const last_name = (req.body.last_name || "").trim();
+    const title = (req.body.title || "").trim();
+
+    if (!first_name || !last_name || !title) {
+      return res.status(400).json({ message: "Ime, priimek in funkcija so obvezni" });
+    }
+
+    const result = await db.query(
+      `UPDATE organization_officials
+       SET first_name = ?, last_name = ?, title = ?, phone = ?, email = ?, whatsapp = ?, viber = ?, telegram = ?
+       WHERE id = ? AND organization_id = ?`,
+      [
+        first_name, last_name, title,
+        cleanOptional(req.body.phone), cleanOptional(req.body.email),
+        cleanOptional(req.body.whatsapp), cleanOptional(req.body.viber), cleanOptional(req.body.telegram),
+        req.params.id, req.user.organization_id
+      ]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Funkcionar ni najden" });
+    }
+
+    res.json({ message: "Funkcionar posodobljen" });
+  } catch (err) {
+    console.error("UPDATE OFFICIAL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.delete("/officials/:id", canManageUsers, async (req, res) => {
+  try {
+    await db.query(
+      "DELETE FROM organization_officials WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    res.json({ message: "Funkcionar izbrisan" });
+  } catch (err) {
+    console.error("DELETE OFFICIAL ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

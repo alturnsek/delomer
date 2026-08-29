@@ -101,6 +101,13 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 - [ ] Uporabniški priročnik (member/admin flow)
 - [ ] Deployment dokumentacija (Azure + Docker/TrueNAS, env var seznam)
 
+## Nastavitve uporabnika in društva
+
+- [x] **Moj profil**: zobnik (⚙️) ob "Osebni podatki" odpre inline panel (`.edit-panel`) za spremembo profilne slike (premaknjeno sem iz prejšnjega ločenega gumba), gesla (staro geslo + novo dvakrat, mora se ujemati, brez preverjanja jakosti - namenoma odloženo do prave produkcije) in emaila. `POST /api/users/me/password`, `PUT /api/users/me/email`. Ime/priimek NI urejljivo s strani uporabnika - to lahko spremeni samo ADMIN/SUPER_ADMIN (obstoječa funkcionalnost).
+- [x] **"Nastavitve društva"** (nov sidebar item, ADMIN only) — logotip društva (upload, `uploads/logos/`, isti vzorec kot avatar), ime in opis društva (`GET/PUT /api/admin/organization`, `POST /api/admin/organization/logo`).
+- [x] **Funkcionarji društva** — CRUD (`/api/admin/officials`): ime, priimek, funkcija (obvezno) + telefon/email/WhatsApp/Viber/Telegram (vsi neobvezni, prikažejo se samo izpolnjena polja). Urejanje po istem vzorcu kot Ekipe (klik ✏️ napolni skupni obrazec, gumb postane "Posodobi").
+- Migracija [migrations/009_org_settings_and_user_account.sql](migrations/009_org_settings_and_user_account.sql) — `organizations.logo_path`/`description`, nova tabela `organization_officials`.
+
 ## Statistika in profil
 
 - [x] **Moj profil** (vsi uporabniki) — ime/priimek/email/društvo (samo prikaz, brez urejanja), profilna slika (upload preko `POST /api/users/me/avatar`, multer, shranjeno v `uploads/avatars/` - **trajen Docker volumen `uploads_data:/app/uploads`**, ne v `src/public` ker bi se ob vsakem `--build` izgubilo), graf opravljenih ur skozi čas (`GET /api/users/me/stats?from&to`, Chart.js, privzeto zadnji mesec) — glej [migrations/006_avatar_and_profile_stats.sql](migrations/006_avatar_and_profile_stats.sql)

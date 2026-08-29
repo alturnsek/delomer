@@ -1,7 +1,25 @@
 CREATE TABLE IF NOT EXISTS organizations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
+  logo_path VARCHAR(255) NULL,
+  description TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS organization_officials (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  title VARCHAR(150) NOT NULL,
+  phone VARCHAR(50) NULL,
+  email VARCHAR(255) NULL,
+  whatsapp VARCHAR(100) NULL,
+  viber VARCHAR(100) NULL,
+  telegram VARCHAR(100) NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_org_officials_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS app_settings (
