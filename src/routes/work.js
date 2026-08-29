@@ -237,10 +237,12 @@ router.put('/:id', async (req, res) => {
 
     const wasRejected = workLog.status === "REJECTED";
 
+    // rejection_reason NAMENOMA ostane po ponovni oddaji (zgodovina) - frontend
+    // ga uporabi za oznako "popravljeno po zavrnitvi", dokler je status PENDING.
     await conn.query(
       `UPDATE work_logs
        SET task = ?, started_at = ?, ended_at = ?, category_id = ?
-           ${wasRejected ? ", status = 'PENDING', pending_since = NOW(), reviewed_by = NULL, reviewed_at = NULL, rejection_reason = NULL" : ""}
+           ${wasRejected ? ", status = 'PENDING', pending_since = NOW()" : ""}
        WHERE id = ?`,
       [task, started_at, ended_at, category_id || null, req.params.id]
     );

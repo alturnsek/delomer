@@ -917,17 +917,45 @@ async function loadAdminWork() {
     });
   });
 
-  document.querySelectorAll(".rejectBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const reason = prompt("Razlog za zavrnitev:");
-      if (!reason) return;
+  document.querySelectorAll(".rejectToggleBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`rejectPanel-${btn.dataset.id}`)?.classList.toggle("hidden");
+    });
+  });
 
-      await fetch(`/api/admin/work/${btn.dataset.id}/reject`, {
+  document.querySelectorAll(".cancelRejectBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`rejectPanel-${btn.dataset.id}`)?.classList.add("hidden");
+    });
+  });
+
+  document.querySelectorAll(".confirmRejectBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const panel = document.getElementById(`rejectPanel-${id}`);
+      const reason = panel.querySelector(".rejectReasonInput").value.trim();
+      const msg = document.getElementById(`rejectMsg-${id}`);
+
+      msg.innerText = "";
+
+      if (!reason) {
+        msg.innerText = "Vnesi razlog za zavrnitev";
+        return;
+      }
+
+      const res = await fetch(`/api/admin/work/${id}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ reason })
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        msg.innerText = data.message || "Napaka";
+        return;
+      }
 
       loadAdminWork();
     });
@@ -942,21 +970,39 @@ function formatParticipant(p, defaultMinutes) {
 function renderAdminWorkItem(w) {
   const hours = (w.minutes / 60).toFixed(2);
   const participants = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
+  const correctedBadge = (w.status === "PENDING" && w.rejection_reason)
+    ? `<span class="status-badge status-CORRECTED">popravljeno po zavrnitvi</span>`
+    : "";
 
   return `
-    <li>
-      <span>
-        <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
-        <span class="status-badge status-${w.status}">${w.status}</span><br>
-        <small>${w.category_name || "brez kategorije"} · ${hours} h · sodelavci: ${participants || "-"}</small>
-        ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog: ${w.rejection_reason}</small>` : ""}
-      </span>
-      <div class="actions">
-        ${w.status === "PENDING" ? `
-          <button class="approveBtn" data-id="${w.id}">✔️</button>
-          <button class="rejectBtn" data-id="${w.id}">✖️</button>
-        ` : ""}
+    <li class="admin-work-item" data-id="${w.id}">
+      <div class="member-row">
+        <span>
+          <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
+          <span class="status-badge status-${w.status}">${w.status}</span>${correctedBadge}<br>
+          <small>${w.category_name || "brez kategorije"} · ${hours} h · sodelavci: ${participants || "-"}</small>
+          ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog: ${w.rejection_reason}</small>` : ""}
+        </span>
+        <div class="actions">
+          ${w.status === "PENDING" ? `
+            <button class="approveBtn" data-id="${w.id}">✔️</button>
+            <button class="rejectToggleBtn" data-id="${w.id}">✖️</button>
+          ` : ""}
+        </div>
       </div>
+      ${w.status === "PENDING" ? `
+        <div class="reject-panel hidden" id="rejectPanel-${w.id}">
+          <div class="field">
+            <label>Razlog za zavrnitev</label>
+            <textarea class="rejectReasonInput" rows="3" placeholder="Opiši razlog za zavrnitev..."></textarea>
+          </div>
+          <div id="rejectMsg-${w.id}" class="error"></div>
+          <div class="edit-actions">
+            <button class="confirmRejectBtn" data-id="${w.id}">Zavrni</button>
+            <button class="cancelRejectBtn secondary-btn" data-id="${w.id}">Prekliči</button>
+          </div>
+        </div>
+      ` : ""}
     </li>
   `;
 }
@@ -986,13 +1032,16 @@ async function loadWork() {
     const participantNames = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
     const isOwner = w.user_id === currentUserId;
     const isLocked = w.status === "APPROVED";
+    const correctedBadge = (w.status === "PENDING" && w.rejection_reason)
+      ? `<span class="status-badge status-CORRECTED">popravljeno po zavrnitvi</span>`
+      : "";
 
     const li = document.createElement("li");
 
     li.innerHTML = `
       <span>
         ${w.task}
-        <span class="status-badge status-${w.status}">${w.status}</span><br>
+        <span class="status-badge status-${w.status}">${w.status}</span>${correctedBadge}<br>
         <small>${w.category_name || "brez kategorije"}${participantNames ? " · " + participantNames : ""}</small>
         ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog zavrnitve: ${w.rejection_reason}</small>` : ""}
       </span>
