@@ -620,6 +620,37 @@ button:hover {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   height: 320px;
+  margin-bottom: 20px;
+}
+
+.stats-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-tile {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  text-align: center;
+  flex: 1;
+  min-width: 140px;
+}
+
+.stat-tile h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #777;
+  font-weight: 500;
+}
+
+.stat-tile span {
+  font-size: 32px;
+  font-weight: 700;
+  color: #4f46e5;
 }
 
 .placeholder-note {
@@ -700,7 +731,8 @@ button:hover {
 #categoryList,
 #adminWorkList,
 #orgAdminsList,
-#teamList {
+#teamList,
+#orgStatsByUserList {
   list-style: none;
   padding: 0;
 }
@@ -711,7 +743,8 @@ button:hover {
 #categoryList li,
 #adminWorkList li,
 #orgAdminsList li,
-#teamList li {
+#teamList li,
+#orgStatsByUserList li {
   background: white;
   padding: 15px;
   margin-bottom: 10px;

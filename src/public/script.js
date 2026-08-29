@@ -47,7 +47,7 @@ const VIEW_LOADERS = {
   categories: () => loadCategoriesAdmin(),
   teams: () => loadTeamsView(),
   approvals: () => loadAdminWork(),
-  "org-stats": () => {},
+  "org-stats": () => loadOrgStatsView(),
   organizations: () => { loadEmailModeSetting(); loadOrganizationsSuperadmin(); },
   "org-admins": () => loadOrgAdminsOrgOptions(),
   "platform-stats": () => {},
@@ -1675,6 +1675,140 @@ function renderHoursChart(canvasId, data, from, to) {
     }
   });
 }
+
+
+/* =========================
+  STATISTIKA DRUŠTVA (ADMIN/SUPERINTENDENT)
+========================= */
+async function loadOrgStatsView() {
+  const fromInput = document.getElementById("orgStatsDateFrom");
+  const toInput = document.getElementById("orgStatsDateTo");
+
+  if (!fromInput.value || !toInput.value) {
+    const now = new Date();
+    const monthAgo = new Date(now);
+    monthAgo.setMonth(now.getMonth() - 1);
+
+    fromInput.value = formatDateForInput(monthAgo);
+    toInput.value = formatDateForInput(now);
+  }
+
+  await loadOrgStatsFilterOptions();
+  loadOrgStats();
+}
+
+async function loadOrgStatsFilterOptions() {
+  const catContainer = document.getElementById("orgStatsCategoryCheckboxes");
+  if (catContainer) {
+    const res = await fetch("/api/admin/categories", { credentials: "include" });
+
+    if (res.ok) {
+      const categories = await res.json();
+
+      catContainer.innerHTML = categories.length
+        ? categories.map(c => `
+            <label>
+              <input type="checkbox" class="orgStatsCategoryCheckbox" value="${c.id}">
+              ${c.name}${c.is_active ? "" : " (neaktivna)"}
+            </label>
+          `).join("")
+        : "<span>Ni še kategorij</span>";
+    }
+  }
+
+  const teamContainer = document.getElementById("orgStatsTeamCheckboxes");
+  if (teamContainer) {
+    const res = await fetch("/api/admin/teams", { credentials: "include" });
+
+    if (res.ok) {
+      const teams = await res.json();
+
+      teamContainer.innerHTML = teams.length
+        ? teams.map(t => `
+            <label>
+              <input type="checkbox" class="orgStatsTeamCheckbox" value="${t.id}">
+              ${t.name}
+            </label>
+          `).join("")
+        : "<span>Ni še ekip</span>";
+    }
+  }
+}
+
+async function loadOrgStats() {
+  const from = document.getElementById("orgStatsDateFrom")?.value;
+  const to = document.getElementById("orgStatsDateTo")?.value;
+
+  if (!from || !to) return;
+
+  const status = document.getElementById("orgStatsStatusFilter")?.value || "APPROVED";
+
+  const categoryIds = Array.from(document.querySelectorAll(".orgStatsCategoryCheckbox:checked")).map(cb => cb.value);
+  const teamIds = Array.from(document.querySelectorAll(".orgStatsTeamCheckbox:checked")).map(cb => cb.value);
+
+  const params = new URLSearchParams({ from, to, status });
+  if (categoryIds.length) params.set("category_ids", categoryIds.join(","));
+  if (teamIds.length) params.set("team_ids", teamIds.join(","));
+
+  const res = await fetch(`/api/admin/stats?${params.toString()}`, { credentials: "include" });
+  if (!res.ok) return;
+
+  const data = await res.json();
+
+  document.getElementById("orgStatsTotalHours").innerText = (data.totalMinutes / 60).toFixed(1);
+
+  renderHoursChart("orgStatsChart", data.byDate, from, to);
+
+  const list = document.getElementById("orgStatsByUserList");
+  list.innerHTML = data.byUser.length
+    ? data.byUser.map(u => `<li><span>${u.first_name} ${u.last_name}</span><span>${(u.minutes / 60).toFixed(2)} h</span></li>`).join("")
+    : "<li>Ni podatkov za izbrano obdobje/filtre</li>";
+}
+
+document.getElementById("orgStatsDateFrom")?.addEventListener("change", loadOrgStats);
+document.getElementById("orgStatsDateTo")?.addEventListener("change", loadOrgStats);
+document.getElementById("orgStatsStatusFilter")?.addEventListener("change", loadOrgStats);
+document.getElementById("orgStatsCategoryCheckboxes")?.addEventListener("change", loadOrgStats);
+document.getElementById("orgStatsTeamCheckboxes")?.addEventListener("change", loadOrgStats);
+
+function applyOrgStatsDateRange(from, to) {
+  document.getElementById("orgStatsDateFrom").value = formatDateForInput(from);
+  document.getElementById("orgStatsDateTo").value = formatDateForInput(to);
+  loadOrgStats();
+}
+
+document.getElementById("orgStatsToday")?.addEventListener("click", () => {
+  const now = new Date();
+  applyOrgStatsDateRange(now, now);
+});
+
+document.getElementById("orgStatsWeek")?.addEventListener("click", () => {
+  const now = new Date();
+  const dayIndex = (now.getDay() + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayIndex);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  applyOrgStatsDateRange(monday, sunday);
+});
+
+document.getElementById("orgStatsMonth")?.addEventListener("click", () => {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  applyOrgStatsDateRange(first, last);
+});
+
+document.getElementById("orgStatsYear")?.addEventListener("click", () => {
+  const now = new Date();
+  applyOrgStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+});
+
+document.getElementById("orgStatsClear")?.addEventListener("click", () => {
+  document.getElementById("orgStatsDateFrom").value = "";
+  document.getElementById("orgStatsDateTo").value = "";
+  loadOrgStats();
+});
 
 
 /* =========================

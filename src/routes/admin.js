@@ -657,4 +657,83 @@ router.post("/work/:id/reject", async (req, res) => {
   }
 });
 
+
+/* =========================
+  STATISTIKA DRUŠTVA (skupaj ur + po članih, filtri: obdobje/status/kategorije/ekipe)
+========================= */
+router.get("/stats", async (req, res) => {
+  try {
+    const { from, to, status, category_ids, team_ids } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "Manjkata from/to parametra" });
+    }
+
+    const conditions = ["work_logs.organization_id = ?", "DATE(work_logs.started_at) BETWEEN ? AND ?"];
+    const params = [req.user.organization_id, from, to];
+
+    const statusFilter = status || "APPROVED";
+    if (statusFilter !== "ALL") {
+      conditions.push("work_logs.status = ?");
+      params.push(statusFilter);
+    }
+
+    const categoryIds = (category_ids || "").split(",").map(Number).filter(Boolean);
+    if (categoryIds.length) {
+      conditions.push(`work_logs.category_id IN (${categoryIds.map(() => "?").join(",")})`);
+      params.push(...categoryIds);
+    }
+
+    const teamIds = (team_ids || "").split(",").map(Number).filter(Boolean);
+    if (teamIds.length) {
+      conditions.push(`work_log_participants.user_id IN (SELECT user_id FROM team_members WHERE team_id IN (${teamIds.map(() => "?").join(",")}))`);
+      params.push(...teamIds);
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    const byDateRows = await db.query(
+      `SELECT DATE(work_logs.started_at) AS work_date,
+              SUM(COALESCE(work_log_participants.minutes_override, TIMESTAMPDIFF(MINUTE, work_logs.started_at, work_logs.ended_at))) AS minutes
+       FROM work_logs
+       JOIN work_log_participants ON work_log_participants.work_log_id = work_logs.id
+       WHERE ${whereClause}
+       GROUP BY DATE(work_logs.started_at)
+       ORDER BY work_date ASC`,
+      params
+    );
+
+    const byUserRows = await db.query(
+      `SELECT work_log_participants.user_id, users.first_name, users.last_name,
+              SUM(COALESCE(work_log_participants.minutes_override, TIMESTAMPDIFF(MINUTE, work_logs.started_at, work_logs.ended_at))) AS minutes
+       FROM work_logs
+       JOIN work_log_participants ON work_log_participants.work_log_id = work_logs.id
+       JOIN users ON users.id = work_log_participants.user_id
+       WHERE ${whereClause}
+       GROUP BY work_log_participants.user_id, users.first_name, users.last_name
+       ORDER BY minutes DESC`,
+      params
+    );
+
+    const byDate = byDateRows.map(r => ({
+      date: r.work_date instanceof Date ? r.work_date.toISOString().slice(0, 10) : r.work_date,
+      minutes: Number(r.minutes)
+    }));
+
+    const byUser = byUserRows.map(r => ({
+      user_id: Number(r.user_id),
+      first_name: r.first_name,
+      last_name: r.last_name,
+      minutes: Number(r.minutes)
+    }));
+
+    const totalMinutes = byUser.reduce((sum, u) => sum + u.minutes, 0);
+
+    res.json({ byDate, byUser, totalMinutes });
+  } catch (err) {
+    console.error("GET ORG STATS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
