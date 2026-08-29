@@ -2,6 +2,8 @@
 
 Delovni seznam za nadaljnji razvoj na `dev` veji. `main` ostaja zamrznjen za predstavitev/zagovor — spremembe sem najprej speljemo skozi `dev`.
 
+**Poganjanje migracij**: `./migrations/run.sh migrations/<ime>.sql` — bere uporabnika/geslo/bazo direktno iz okoljskih spremenljivk `db` kontejnerja (te že nastavi Docker Compose), zato ni potrebe po ročnem `grep`-anju gesla iz `.env` ali vnašanju gesla interaktivno. Starejši migracijski komentarji ("Zagon: ...") še vedno delujejo, a so ostali v stari, bolj okorni obliki.
+
 Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](ostalo/Jira.html) (131 issue-jev, KAN-5 do KAN-135, vsi še v statusu Backlog). Ta datoteka povzema tisti načrt v obliki checklist-a in dodaja sprotne TODO-je iz razvoja/deploya, ki jih je smiselno reševati tekoče.
 
 ## Varnost / pred pravim produkcijskim zagonom
