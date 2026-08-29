@@ -331,24 +331,25 @@
             <button type="button" id="orgStatsClear" class="secondary-btn">Počisti</button>
           </div>
 
-          <div class="field">
-            <label>Status</label>
-            <select id="orgStatsStatusFilter">
-              <option value="APPROVED">Potrjeno</option>
-              <option value="ALL">Vsi statusi</option>
-              <option value="PENDING">V obravnavi</option>
-              <option value="REJECTED">Zavrnjeno</option>
-            </select>
-          </div>
+          <div class="row">
+            <div class="dropdown-check-filter">
+              <button type="button" class="dropdown-check-btn" id="orgStatsStatusBtn" data-target="orgStatsStatusPanel">Status: Potrjeno ▾</button>
+              <div class="dropdown-check-panel hidden" id="orgStatsStatusPanel">
+                <label><input type="checkbox" value="APPROVED" checked> Potrjeno</label>
+                <label><input type="checkbox" value="PENDING"> V obravnavi</label>
+                <label><input type="checkbox" value="REJECTED"> Zavrnjeno</label>
+              </div>
+            </div>
 
-          <div class="field">
-            <label>Kategorije (prazno = vse)</label>
-            <div id="orgStatsCategoryCheckboxes" class="checkbox-list"></div>
-          </div>
+            <div class="dropdown-check-filter">
+              <button type="button" class="dropdown-check-btn" id="orgStatsCategoryBtn" data-target="orgStatsCategoryPanel">Kategorije: Vse ▾</button>
+              <div class="dropdown-check-panel hidden" id="orgStatsCategoryPanel"></div>
+            </div>
 
-          <div class="field">
-            <label>Ekipe (prazno = vse)</label>
-            <div id="orgStatsTeamCheckboxes" class="checkbox-list"></div>
+            <div class="dropdown-check-filter">
+              <button type="button" class="dropdown-check-btn" id="orgStatsTeamBtn" data-target="orgStatsTeamPanel">Ekipe: Vse ▾</button>
+              <div class="dropdown-check-panel hidden" id="orgStatsTeamPanel"></div>
+            </div>
           </div>
         </div>
 

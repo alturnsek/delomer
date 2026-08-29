@@ -1697,18 +1697,59 @@ async function loadOrgStatsView() {
   loadOrgStats();
 }
 
+/* =========================
+  SPUSTNI SEZNAM Z VEČ KLJUKICAMI (status/kategorije/ekipe)
+========================= */
+function setupDropdownCheckFilter(btnId, panelId, label, onChange) {
+  const btn = document.getElementById(btnId);
+  const panel = document.getElementById(panelId);
+  if (!btn || !panel) return;
+
+  function updateLabel() {
+    const checked = panel.querySelectorAll("input:checked").length;
+    btn.innerText = checked ? `${label}: ${checked} izbranih ▾` : `${label}: Vse ▾`;
+  }
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+
+    document.querySelectorAll(".dropdown-check-panel").forEach(p => {
+      if (p !== panel) p.classList.add("hidden");
+    });
+
+    panel.classList.toggle("hidden");
+  });
+
+  panel.addEventListener("change", () => {
+    updateLabel();
+    if (onChange) onChange();
+  });
+
+  updateLabel();
+}
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".dropdown-check-filter")) {
+    document.querySelectorAll(".dropdown-check-panel").forEach(p => p.classList.add("hidden"));
+  }
+});
+
+setupDropdownCheckFilter("orgStatsStatusBtn", "orgStatsStatusPanel", "Status", () => loadOrgStats());
+setupDropdownCheckFilter("orgStatsCategoryBtn", "orgStatsCategoryPanel", "Kategorije", () => loadOrgStats());
+setupDropdownCheckFilter("orgStatsTeamBtn", "orgStatsTeamPanel", "Ekipe", () => loadOrgStats());
+
 async function loadOrgStatsFilterOptions() {
-  const catContainer = document.getElementById("orgStatsCategoryCheckboxes");
-  if (catContainer) {
+  const catPanel = document.getElementById("orgStatsCategoryPanel");
+  if (catPanel) {
     const res = await fetch("/api/admin/categories", { credentials: "include" });
 
     if (res.ok) {
       const categories = await res.json();
 
-      catContainer.innerHTML = categories.length
+      catPanel.innerHTML = categories.length
         ? categories.map(c => `
             <label>
-              <input type="checkbox" class="orgStatsCategoryCheckbox" value="${c.id}">
+              <input type="checkbox" value="${c.id}">
               ${c.name}${c.is_active ? "" : " (neaktivna)"}
             </label>
           `).join("")
@@ -1716,17 +1757,17 @@ async function loadOrgStatsFilterOptions() {
     }
   }
 
-  const teamContainer = document.getElementById("orgStatsTeamCheckboxes");
-  if (teamContainer) {
+  const teamPanel = document.getElementById("orgStatsTeamPanel");
+  if (teamPanel) {
     const res = await fetch("/api/admin/teams", { credentials: "include" });
 
     if (res.ok) {
       const teams = await res.json();
 
-      teamContainer.innerHTML = teams.length
+      teamPanel.innerHTML = teams.length
         ? teams.map(t => `
             <label>
-              <input type="checkbox" class="orgStatsTeamCheckbox" value="${t.id}">
+              <input type="checkbox" value="${t.id}">
               ${t.name}
             </label>
           `).join("")
@@ -1741,12 +1782,12 @@ async function loadOrgStats() {
 
   if (!from || !to) return;
 
-  const status = document.getElementById("orgStatsStatusFilter")?.value || "APPROVED";
+  const statuses = Array.from(document.querySelectorAll("#orgStatsStatusPanel input:checked")).map(cb => cb.value);
+  const categoryIds = Array.from(document.querySelectorAll("#orgStatsCategoryPanel input:checked")).map(cb => cb.value);
+  const teamIds = Array.from(document.querySelectorAll("#orgStatsTeamPanel input:checked")).map(cb => cb.value);
 
-  const categoryIds = Array.from(document.querySelectorAll(".orgStatsCategoryCheckbox:checked")).map(cb => cb.value);
-  const teamIds = Array.from(document.querySelectorAll(".orgStatsTeamCheckbox:checked")).map(cb => cb.value);
-
-  const params = new URLSearchParams({ from, to, status });
+  const params = new URLSearchParams({ from, to });
+  if (statuses.length) params.set("statuses", statuses.join(","));
   if (categoryIds.length) params.set("category_ids", categoryIds.join(","));
   if (teamIds.length) params.set("team_ids", teamIds.join(","));
 

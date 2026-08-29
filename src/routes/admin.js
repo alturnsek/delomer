@@ -663,7 +663,7 @@ router.post("/work/:id/reject", async (req, res) => {
 ========================= */
 router.get("/stats", async (req, res) => {
   try {
-    const { from, to, status, category_ids, team_ids } = req.query;
+    const { from, to, statuses, category_ids, team_ids } = req.query;
 
     if (!from || !to) {
       return res.status(400).json({ message: "Manjkata from/to parametra" });
@@ -672,10 +672,10 @@ router.get("/stats", async (req, res) => {
     const conditions = ["work_logs.organization_id = ?", "DATE(work_logs.started_at) BETWEEN ? AND ?"];
     const params = [req.user.organization_id, from, to];
 
-    const statusFilter = status || "APPROVED";
-    if (statusFilter !== "ALL") {
-      conditions.push("work_logs.status = ?");
-      params.push(statusFilter);
+    const statusList = (statuses || "").split(",").filter(Boolean);
+    if (statusList.length) {
+      conditions.push(`work_logs.status IN (${statusList.map(() => "?").join(",")})`);
+      params.push(...statusList);
     }
 
     const categoryIds = (category_ids || "").split(",").map(Number).filter(Boolean);
