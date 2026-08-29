@@ -38,6 +38,27 @@ function roleLabel(role) {
   return ROLE_LABELS[role] || role;
 }
 
+// slovensko sklanjanje: 1 član, 2 člana, 3-4 člani, sicer članov (11-14 vedno članov)
+function memberCountLabel(n) {
+  const mod100 = n % 100;
+  const mod10 = n % 10;
+
+  let word;
+  if (mod100 >= 11 && mod100 <= 14) {
+    word = "članov";
+  } else if (mod10 === 1) {
+    word = "član";
+  } else if (mod10 === 2) {
+    word = "člana";
+  } else if (mod10 === 3 || mod10 === 4) {
+    word = "člani";
+  } else {
+    word = "članov";
+  }
+
+  return `${n} ${word}`;
+}
+
 /* =========================
   VIEW ROUTING (sidebar meni)
 ========================= */
@@ -50,7 +71,7 @@ const VIEW_LOADERS = {
   "org-stats": () => loadOrgStatsView(),
   organizations: () => { loadEmailModeSetting(); loadOrganizationsSuperadmin(); },
   "org-admins": () => loadOrgAdminsOrgOptions(),
-  "platform-stats": () => {},
+  "platform-stats": () => loadPlatformStatsView(),
   profile: () => loadProfileView()
 };
 
@@ -339,7 +360,7 @@ function renderOrganization(o) {
   return `
     <li class="org-item" data-id="${o.id}">
       <div class="member-row">
-        <span>${o.name} — ${o.member_count} članov</span>
+        <span>${o.name} — ${memberCountLabel(o.member_count)}</span>
         <button class="editOrgBtn icon-btn btn-edit" data-id="${o.id}">✏️</button>
       </div>
       <div class="edit-panel hidden" id="orgEdit-${o.id}">
@@ -421,7 +442,12 @@ document.getElementById("orgAdminsSelect")?.addEventListener("change", (e) => {
   loadOrgAdminsUsers(e.target.value);
 });
 
+let orgAdminsMembersCache = [];
+let currentOrgAdminsOrgId = null;
+
 async function loadOrgAdminsUsers(organizationId) {
+  currentOrgAdminsOrgId = organizationId;
+
   const list = document.getElementById("orgAdminsList");
   if (!list || !organizationId) {
     if (list) list.innerHTML = "";
@@ -431,11 +457,41 @@ async function loadOrgAdminsUsers(organizationId) {
   const res = await fetch(`/api/superadmin/organizations/${organizationId}/users`, { credentials: "include" });
   if (!res.ok) return;
 
-  const members = await res.json();
+  orgAdminsMembersCache = await res.json();
+  renderOrgAdminsList();
+}
+
+function renderOrgAdminsList() {
+  const list = document.getElementById("orgAdminsList");
+  const organizationId = currentOrgAdminsOrgId;
+  if (!list || !organizationId) return;
+
+  const query = (document.getElementById("orgAdminsSearch")?.value || "").trim().toLowerCase();
+  const statusFilter = document.getElementById("orgAdminsStatusFilter")?.value || "ALL";
+  const roleFilter = document.getElementById("orgAdminsRoleFilter")?.value || "ALL";
+  const sortMode = document.getElementById("orgAdminsSort")?.value || "last_asc";
+
+  let members = orgAdminsMembersCache.filter(m => {
+    if (query && !m.first_name.toLowerCase().startsWith(query) && !m.last_name.toLowerCase().startsWith(query)) return false;
+    if (statusFilter === "ACTIVE" && !m.is_active) return false;
+    if (statusFilter === "INACTIVE" && m.is_active) return false;
+    if (roleFilter !== "ALL" && m.role !== roleFilter) return false;
+    return true;
+  });
+
+  const [sortField, sortDir] = sortMode.split("_");
+  const sortKey = sortField === "first" ? "first_name" : "last_name";
+
+  members = [...members].sort((a, b) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+
+    const cmp = a[sortKey].localeCompare(b[sortKey], "sl");
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   list.innerHTML = members.length
     ? members.map(m => renderRoleManagedMember(m, `/api/superadmin/organizations/${organizationId}/users`)).join("")
-    : "<li>Ni še članov</li>";
+    : "<li>Ni članov, ki bi ustrezali filtru</li>";
 
   wireRoleSelects();
 
@@ -503,11 +559,18 @@ async function loadOrgAdminsUsers(organizationId) {
   });
 }
 
+document.getElementById("orgAdminsSearch")?.addEventListener("input", renderOrgAdminsList);
+document.getElementById("orgAdminsStatusFilter")?.addEventListener("change", renderOrgAdminsList);
+document.getElementById("orgAdminsRoleFilter")?.addEventListener("change", renderOrgAdminsList);
+document.getElementById("orgAdminsSort")?.addEventListener("change", renderOrgAdminsList);
+
 function renderRoleManagedMember(m, roleEndpointBase) {
+  const inactiveNote = m.is_active ? "" : " (deaktiviran)";
+
   return `
-    <li class="member-item" data-id="${m.id}">
+    <li class="member-item${m.is_active ? "" : " member-inactive"}" data-id="${m.id}">
       <div class="member-row">
-        <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
+        <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}${inactiveNote}</span>
         <div class="actions">
           <select class="roleSelect" data-id="${m.id}" data-endpoint="${roleEndpointBase}">
             <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>${roleLabel("MEMBER")}</option>
@@ -1081,7 +1144,7 @@ async function loadTeamList() {
   list.innerHTML = teams.length
     ? teams.map(t => `
         <li>
-          <span>${t.name} (${t.member_ids.length} članov)</span>
+          <span>${t.name} (${memberCountLabel(t.member_ids.length)})</span>
           <div class="actions">
             <button class="editTeamBtn" data-id="${t.id}">✏️</button>
             <button class="deleteTeamBtn" data-id="${t.id}">❌</button>
@@ -1259,7 +1322,7 @@ async function loadTeamsForPicker() {
   orgTeamsCache = await res.json();
 
   select.innerHTML = `<option value="">+ Dodaj ekipo...</option>` +
-    orgTeamsCache.map(t => `<option value="${t.id}">${t.name} (${t.member_ids.length})</option>`).join("");
+    orgTeamsCache.map(t => `<option value="${t.id}">${t.name} (${memberCountLabel(t.member_ids.length)})</option>`).join("");
 }
 
 document.getElementById("teamQuickAdd")?.addEventListener("change", (e) => {
@@ -1800,11 +1863,16 @@ async function loadOrgStats() {
 
   renderHoursChart("orgStatsChart", data.byDate, from, to);
 
+  const topN = Number(document.getElementById("orgStatsTopN")?.value) || 10;
+  const byUserTop = data.byUser.slice(0, topN);
+
   const list = document.getElementById("orgStatsByUserList");
-  list.innerHTML = data.byUser.length
-    ? data.byUser.map(u => `<li><span>${u.first_name} ${u.last_name}</span><span>${(u.minutes / 60).toFixed(2)} h</span></li>`).join("")
+  list.innerHTML = byUserTop.length
+    ? byUserTop.map(u => `<li><span>${u.first_name} ${u.last_name}</span><span>${(u.minutes / 60).toFixed(2)} h</span></li>`).join("")
     : "<li>Ni podatkov za izbrano obdobje/filtre</li>";
 }
+
+document.getElementById("orgStatsTopN")?.addEventListener("input", loadOrgStats);
 
 document.getElementById("orgStatsDateFrom")?.addEventListener("change", loadOrgStats);
 document.getElementById("orgStatsDateTo")?.addEventListener("change", loadOrgStats);
@@ -1849,6 +1917,114 @@ document.getElementById("orgStatsClear")?.addEventListener("click", () => {
   document.getElementById("orgStatsDateFrom").value = "";
   document.getElementById("orgStatsDateTo").value = "";
   loadOrgStats();
+});
+
+
+/* =========================
+  STATISTIKA VSEH DRUŠTEV (SUPER_ADMIN)
+========================= */
+async function loadPlatformStatsView() {
+  const fromInput = document.getElementById("platformStatsDateFrom");
+  const toInput = document.getElementById("platformStatsDateTo");
+
+  if (!fromInput.value || !toInput.value) {
+    const now = new Date();
+    const monthAgo = new Date(now);
+    monthAgo.setMonth(now.getMonth() - 1);
+
+    fromInput.value = formatDateForInput(monthAgo);
+    toInput.value = formatDateForInput(now);
+  }
+
+  await loadPlatformStatsFilterOptions();
+  loadPlatformStats();
+}
+
+setupDropdownCheckFilter("platformStatsStatusBtn", "platformStatsStatusPanel", "Status", () => loadPlatformStats());
+setupDropdownCheckFilter("platformStatsOrgBtn", "platformStatsOrgPanel", "Društva", () => loadPlatformStats());
+
+async function loadPlatformStatsFilterOptions() {
+  const orgPanel = document.getElementById("platformStatsOrgPanel");
+  if (!orgPanel) return;
+
+  const res = await fetch("/api/superadmin/organizations", { credentials: "include" });
+  if (!res.ok) return;
+
+  const orgs = await res.json();
+
+  orgPanel.innerHTML = orgs.length
+    ? orgs.map(o => `<label><input type="checkbox" value="${o.id}"> ${o.name}</label>`).join("")
+    : "<span>Ni še nobenega društva</span>";
+}
+
+async function loadPlatformStats() {
+  const from = document.getElementById("platformStatsDateFrom")?.value;
+  const to = document.getElementById("platformStatsDateTo")?.value;
+
+  if (!from || !to) return;
+
+  const statuses = Array.from(document.querySelectorAll("#platformStatsStatusPanel input:checked")).map(cb => cb.value);
+  const organizationIds = Array.from(document.querySelectorAll("#platformStatsOrgPanel input:checked")).map(cb => cb.value);
+
+  const params = new URLSearchParams({ from, to });
+  if (statuses.length) params.set("statuses", statuses.join(","));
+  if (organizationIds.length) params.set("organization_ids", organizationIds.join(","));
+
+  const res = await fetch(`/api/superadmin/stats?${params.toString()}`, { credentials: "include" });
+  if (!res.ok) return;
+
+  const data = await res.json();
+
+  document.getElementById("platformStatsTotalHours").innerText = (data.totalMinutes / 60).toFixed(1);
+
+  renderHoursChart("platformStatsChart", data.byDate, from, to);
+
+  const list = document.getElementById("platformStatsByOrgList");
+  list.innerHTML = data.byOrganization.length
+    ? data.byOrganization.map(o => `<li><span>${o.name}</span><span>${(o.minutes / 60).toFixed(2)} h</span></li>`).join("")
+    : "<li>Ni podatkov za izbrano obdobje/filtre</li>";
+}
+
+document.getElementById("platformStatsDateFrom")?.addEventListener("change", loadPlatformStats);
+document.getElementById("platformStatsDateTo")?.addEventListener("change", loadPlatformStats);
+
+function applyPlatformStatsDateRange(from, to) {
+  document.getElementById("platformStatsDateFrom").value = formatDateForInput(from);
+  document.getElementById("platformStatsDateTo").value = formatDateForInput(to);
+  loadPlatformStats();
+}
+
+document.getElementById("platformStatsToday")?.addEventListener("click", () => {
+  const now = new Date();
+  applyPlatformStatsDateRange(now, now);
+});
+
+document.getElementById("platformStatsWeek")?.addEventListener("click", () => {
+  const now = new Date();
+  const dayIndex = (now.getDay() + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayIndex);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  applyPlatformStatsDateRange(monday, sunday);
+});
+
+document.getElementById("platformStatsMonth")?.addEventListener("click", () => {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  applyPlatformStatsDateRange(first, last);
+});
+
+document.getElementById("platformStatsYear")?.addEventListener("click", () => {
+  const now = new Date();
+  applyPlatformStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+});
+
+document.getElementById("platformStatsClear")?.addEventListener("click", () => {
+  document.getElementById("platformStatsDateFrom").value = "";
+  document.getElementById("platformStatsDateTo").value = "";
+  loadPlatformStats();
 });
 
 

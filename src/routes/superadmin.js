@@ -145,7 +145,7 @@ router.post("/settings/email-mode", async (req, res) => {
 router.get("/organizations/:id/users", async (req, res) => {
   try {
     const rows = await db.query(
-      `SELECT id, first_name, last_name, email, role,
+      `SELECT id, first_name, last_name, email, role, is_active,
               (password_hash != '') AS activated
        FROM users
        WHERE organization_id = ?
@@ -256,6 +256,78 @@ router.post("/organizations/:id/users/:userId/role", async (req, res) => {
     res.json({ message: "Vloga posodobljena" });
   } catch (err) {
     console.error("CHANGE ROLE (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  STATISTIKA VSEH DRUŠTEV (skupaj + po društvih, filtri: obdobje/status/društva)
+========================= */
+router.get("/stats", async (req, res) => {
+  try {
+    const { from, to, statuses, organization_ids } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "Manjkata from/to parametra" });
+    }
+
+    const conditions = ["DATE(work_logs.started_at) BETWEEN ? AND ?"];
+    const params = [from, to];
+
+    const statusList = (statuses || "").split(",").filter(Boolean);
+    if (statusList.length) {
+      conditions.push(`work_logs.status IN (${statusList.map(() => "?").join(",")})`);
+      params.push(...statusList);
+    }
+
+    const orgIds = (organization_ids || "").split(",").map(Number).filter(Boolean);
+    if (orgIds.length) {
+      conditions.push(`work_logs.organization_id IN (${orgIds.map(() => "?").join(",")})`);
+      params.push(...orgIds);
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    const byDateRows = await db.query(
+      `SELECT DATE(work_logs.started_at) AS work_date,
+              SUM(COALESCE(work_log_participants.minutes_override, TIMESTAMPDIFF(MINUTE, work_logs.started_at, work_logs.ended_at))) AS minutes
+       FROM work_logs
+       JOIN work_log_participants ON work_log_participants.work_log_id = work_logs.id
+       WHERE ${whereClause}
+       GROUP BY DATE(work_logs.started_at)
+       ORDER BY work_date ASC`,
+      params
+    );
+
+    const byOrgRows = await db.query(
+      `SELECT work_logs.organization_id, organizations.name,
+              SUM(COALESCE(work_log_participants.minutes_override, TIMESTAMPDIFF(MINUTE, work_logs.started_at, work_logs.ended_at))) AS minutes
+       FROM work_logs
+       JOIN work_log_participants ON work_log_participants.work_log_id = work_logs.id
+       JOIN organizations ON organizations.id = work_logs.organization_id
+       WHERE ${whereClause}
+       GROUP BY work_logs.organization_id, organizations.name
+       ORDER BY minutes DESC`,
+      params
+    );
+
+    const byDate = byDateRows.map(r => ({
+      date: r.work_date instanceof Date ? r.work_date.toISOString().slice(0, 10) : r.work_date,
+      minutes: Number(r.minutes)
+    }));
+
+    const byOrganization = byOrgRows.map(r => ({
+      organization_id: Number(r.organization_id),
+      name: r.name,
+      minutes: Number(r.minutes)
+    }));
+
+    const totalMinutes = byOrganization.reduce((sum, o) => sum + o.minutes, 0);
+
+    res.json({ byDate, byOrganization, totalMinutes });
+  } catch (err) {
+    console.error("GET PLATFORM STATS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

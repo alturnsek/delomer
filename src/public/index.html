@@ -364,7 +364,13 @@
           <canvas id="orgStatsChart"></canvas>
         </div>
 
-        <h2>Ure po članih</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <h2>Ure po članih</h2>
+          <div class="field" style="max-width:160px;">
+            <label>Prikaži top</label>
+            <input type="number" id="orgStatsTopN" value="10" min="1">
+          </div>
+        </div>
         <ul id="orgStatsByUserList"></ul>
       </section>
 
@@ -406,13 +412,84 @@
           <select id="orgAdminsSelect"></select>
         </div>
 
+        <div class="participant-controls">
+          <input id="orgAdminsSearch" placeholder="Išči po imenu ali priimku...">
+          <select id="orgAdminsStatusFilter">
+            <option value="ALL">Vsi statusi</option>
+            <option value="ACTIVE">Aktivni</option>
+            <option value="INACTIVE">Neaktivni</option>
+          </select>
+          <select id="orgAdminsRoleFilter">
+            <option value="ALL">Vse vloge</option>
+            <option value="MEMBER">Član</option>
+            <option value="SUPERINTENDENT">Nadzornik</option>
+            <option value="ADMIN">Administrator</option>
+          </select>
+          <select id="orgAdminsSort">
+            <option value="first_asc">Ime A-Ž</option>
+            <option value="first_desc">Ime Ž-A</option>
+            <option value="last_asc">Priimek A-Ž</option>
+            <option value="last_desc">Priimek Ž-A</option>
+          </select>
+        </div>
+
         <ul id="orgAdminsList"></ul>
       </section>
 
       <!-- SUPER ADMIN: STATISTIKA DRUŠTEV (placeholder) -->
       <section id="view-platform-stats" class="view hidden">
         <h2>Statistika društev</h2>
-        <p class="placeholder-note">Statistika društev bo na voljo kmalu.</p>
+
+        <div class="work-form">
+          <div class="row">
+            <div class="field">
+              <label>Od datuma</label>
+              <input type="date" id="platformStatsDateFrom">
+            </div>
+            <div class="field">
+              <label>Do datuma</label>
+              <input type="date" id="platformStatsDateTo">
+            </div>
+          </div>
+
+          <div class="row">
+            <button type="button" id="platformStatsToday" class="secondary-btn">Danes</button>
+            <button type="button" id="platformStatsWeek" class="secondary-btn">Ta teden</button>
+            <button type="button" id="platformStatsMonth" class="secondary-btn">Ta mesec</button>
+            <button type="button" id="platformStatsYear" class="secondary-btn">To leto</button>
+            <button type="button" id="platformStatsClear" class="secondary-btn">Počisti</button>
+          </div>
+
+          <div class="row">
+            <div class="dropdown-check-filter">
+              <button type="button" class="dropdown-check-btn" id="platformStatsStatusBtn" data-target="platformStatsStatusPanel">Status: Potrjeno ▾</button>
+              <div class="dropdown-check-panel hidden" id="platformStatsStatusPanel">
+                <label><input type="checkbox" value="APPROVED" checked> Potrjeno</label>
+                <label><input type="checkbox" value="PENDING"> V obravnavi</label>
+                <label><input type="checkbox" value="REJECTED"> Zavrnjeno</label>
+              </div>
+            </div>
+
+            <div class="dropdown-check-filter">
+              <button type="button" class="dropdown-check-btn" id="platformStatsOrgBtn" data-target="platformStatsOrgPanel">Društva: Vsa ▾</button>
+              <div class="dropdown-check-panel hidden" id="platformStatsOrgPanel"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-summary">
+          <div class="stat-tile">
+            <h3>Skupaj ur (vsa društva)</h3>
+            <span id="platformStatsTotalHours">0</span>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="platformStatsChart"></canvas>
+        </div>
+
+        <h2>Ure po društvih</h2>
+        <ul id="platformStatsByOrgList"></ul>
       </section>
 
       <!-- MOJ PROFIL -->

@@ -247,15 +247,18 @@ code {
 
 /* Osivi samo besedilo/oznako vloge v strnjeni vrstici - gumb za urejanje
    in odprt edit-panel ostaneta polnobarvna in berljiva. */
-#orgMembersList .member-item.member-inactive {
+#orgMembersList .member-item.member-inactive,
+#orgAdminsList .member-item.member-inactive {
   background: #f1f5f9;
 }
 
-#orgMembersList .member-item.member-inactive > .member-row > span {
+#orgMembersList .member-item.member-inactive > .member-row > span,
+#orgAdminsList .member-item.member-inactive > .member-row > span {
   color: #94a3b8;
 }
 
-#orgMembersList .member-item.member-inactive > .member-row .status-badge {
+#orgMembersList .member-item.member-inactive > .member-row .status-badge,
+#orgAdminsList .member-item.member-inactive > .member-row .status-badge {
   opacity: 0.6;
 }
 
@@ -787,7 +790,8 @@ button:hover {
 #adminWorkList,
 #orgAdminsList,
 #teamList,
-#orgStatsByUserList {
+#orgStatsByUserList,
+#platformStatsByOrgList {
   list-style: none;
   padding: 0;
 }
@@ -799,7 +803,8 @@ button:hover {
 #adminWorkList li,
 #orgAdminsList li,
 #teamList li,
-#orgStatsByUserList li {
+#orgStatsByUserList li,
+#platformStatsByOrgList li {
   background: white;
   padding: 15px;
   margin-bottom: 10px;
