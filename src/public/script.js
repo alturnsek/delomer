@@ -935,8 +935,10 @@ document.getElementById("teamQuickAdd")?.addEventListener("change", (e) => {
 
 
 /* =========================
-  ADMIN - DELO V DRUŠTVU
+  ADMIN - DELO V DRUŠTVU (+ filtri po datumu/statusu)
 ========================= */
+let adminWorkCache = [];
+
 async function loadAdminWork() {
   const list = document.getElementById("adminWorkList");
   if (!list) return;
@@ -944,11 +946,33 @@ async function loadAdminWork() {
   const res = await fetch("/api/admin/work", { credentials: "include" });
   if (!res.ok) return;
 
-  const items = await res.json();
+  adminWorkCache = await res.json();
+  renderAdminWorkList();
+}
+
+function renderAdminWorkList() {
+  const list = document.getElementById("adminWorkList");
+  if (!list) return;
+
+  const from = document.getElementById("approvalsDateFrom")?.value || "";
+  const to = document.getElementById("approvalsDateTo")?.value || "";
+  const statusFilter = document.getElementById("approvalsStatusFilter")?.value || "ALL";
+
+  const items = adminWorkCache.filter(w => {
+    const workDate = (w.started_at || "").slice(0, 10);
+
+    if (from && workDate < from) return false;
+    if (to && workDate > to) return false;
+
+    if (statusFilter === "ALL") return true;
+    if (statusFilter === "PENDING_CORRECTED") return w.status === "PENDING" && !!w.rejection_reason;
+    if (statusFilter === "PENDING") return w.status === "PENDING" && !w.rejection_reason;
+    return w.status === statusFilter;
+  });
 
   list.innerHTML = items.length
     ? items.map(renderAdminWorkItem).join("")
-    : "<li>Ni še vnosov</li>";
+    : "<li>Ni vnosov, ki bi ustrezali filtru</li>";
 
   document.querySelectorAll(".approveBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
@@ -1006,6 +1030,54 @@ async function loadAdminWork() {
   });
 }
 
+function formatDateForInput(date) {
+  const pad = n => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function applyApprovalsDateRange(from, to) {
+  document.getElementById("approvalsDateFrom").value = formatDateForInput(from);
+  document.getElementById("approvalsDateTo").value = formatDateForInput(to);
+  renderAdminWorkList();
+}
+
+document.getElementById("filterToday")?.addEventListener("click", () => {
+  const now = new Date();
+  applyApprovalsDateRange(now, now);
+});
+
+document.getElementById("filterWeek")?.addEventListener("click", () => {
+  const now = new Date();
+  const dayIndex = (now.getDay() + 6) % 7; // 0 = ponedeljek ... 6 = nedelja
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayIndex);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  applyApprovalsDateRange(monday, sunday);
+});
+
+document.getElementById("filterMonth")?.addEventListener("click", () => {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  applyApprovalsDateRange(first, last);
+});
+
+document.getElementById("filterYear")?.addEventListener("click", () => {
+  const now = new Date();
+  applyApprovalsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+});
+
+document.getElementById("filterClear")?.addEventListener("click", () => {
+  document.getElementById("approvalsDateFrom").value = "";
+  document.getElementById("approvalsDateTo").value = "";
+  renderAdminWorkList();
+});
+
+document.getElementById("approvalsDateFrom")?.addEventListener("change", renderAdminWorkList);
+document.getElementById("approvalsDateTo")?.addEventListener("change", renderAdminWorkList);
+document.getElementById("approvalsStatusFilter")?.addEventListener("change", renderAdminWorkList);
+
 function formatParticipant(p, defaultMinutes) {
   const minutes = p.minutes_override === null || p.minutes_override === undefined ? defaultMinutes : p.minutes_override;
   return `${p.first_name} ${p.last_name} (${(minutes / 60).toFixed(2)} h)`;
@@ -1029,8 +1101,8 @@ function renderAdminWorkItem(w) {
         </span>
         <div class="actions">
           ${w.status === "PENDING" ? `
-            <button class="approveBtn icon-btn btn-approve" data-id="${w.id}">✔️</button>
-            <button class="rejectToggleBtn icon-btn btn-reject" data-id="${w.id}">✖️</button>
+            <button class="approveBtn icon-btn btn-approve" data-id="${w.id}">✓</button>
+            <button class="rejectToggleBtn icon-btn btn-reject" data-id="${w.id}">✗</button>
           ` : ""}
         </div>
       </div>

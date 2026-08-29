@@ -173,6 +173,38 @@
       <section id="view-approvals" class="view hidden">
         <h2>Potrjevanje dela</h2>
 
+        <div class="work-form">
+          <div class="row">
+            <div class="field">
+              <label>Od datuma</label>
+              <input type="date" id="approvalsDateFrom">
+            </div>
+            <div class="field">
+              <label>Do datuma</label>
+              <input type="date" id="approvalsDateTo">
+            </div>
+          </div>
+
+          <div class="row">
+            <button type="button" id="filterToday" class="secondary-btn">Danes</button>
+            <button type="button" id="filterWeek" class="secondary-btn">Ta teden</button>
+            <button type="button" id="filterMonth" class="secondary-btn">Ta mesec</button>
+            <button type="button" id="filterYear" class="secondary-btn">To leto</button>
+            <button type="button" id="filterClear" class="secondary-btn">Počisti</button>
+          </div>
+
+          <div class="field">
+            <label>Status</label>
+            <select id="approvalsStatusFilter">
+              <option value="ALL">Vsi</option>
+              <option value="PENDING">V obravnavi</option>
+              <option value="PENDING_CORRECTED">V obravnavi (popravljeno po zavrnitvi)</option>
+              <option value="APPROVED">Potrjeno</option>
+              <option value="REJECTED">Zavrnjeno</option>
+            </select>
+          </div>
+        </div>
+
         <ul id="adminWorkList"></ul>
       </section>
 
@@ -238,8 +270,7 @@
 </div>
 
 <footer class="main-footer">
-  <p>© 2026 Delomer — CI/CD test v1</p>
-  <p>Kontakt: aleksander.turnsek@student.um.si</p>
+  <p>© 2026 Delomer</p>
 </footer>
 
 <script src="script.js"></script>
