@@ -208,6 +208,7 @@ code {
 
 .participant-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -216,7 +217,7 @@ code {
 .participant-controls select {
   margin: 0;
   flex: 1;
-  min-width: 0;
+  min-width: 140px;
 }
 
 .participant-row {
@@ -244,9 +245,18 @@ code {
   background: #64748b;
 }
 
+/* Osivi samo besedilo/oznako vloge v strnjeni vrstici - gumb za urejanje
+   in odprt edit-panel ostaneta polnobarvna in berljiva. */
 #orgMembersList .member-item.member-inactive {
-  opacity: 0.55;
   background: #f1f5f9;
+}
+
+#orgMembersList .member-item.member-inactive > .member-row > span {
+  color: #94a3b8;
+}
+
+#orgMembersList .member-item.member-inactive > .member-row .status-badge {
+  opacity: 0.6;
 }
 
 #orgMembersList .member-item {

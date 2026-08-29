@@ -75,7 +75,7 @@ document.querySelectorAll(".nav-link").forEach(link => {
 });
 
 /* =========================
-  POD-ZAVIHKI (npr. Člani: Prikaz/Dodajanje)
+  POD-ZAVIHKI (npr. Člani: Prikaz/Dodajanje, Ekipe: Ekipe/Dodajanje)
 ========================= */
 document.querySelectorAll(".subtab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -86,7 +86,7 @@ document.querySelectorAll(".subtab-btn").forEach(btn => {
     parent.querySelectorAll(".subtab-panel").forEach(p => p.classList.add("hidden"));
 
     btn.classList.add("active");
-    document.getElementById(`membersSubtab-${btn.dataset.subtab}`)?.classList.remove("hidden");
+    parent.querySelector(`.subtab-panel[data-subtab-panel="${btn.dataset.subtab}"]`)?.classList.remove("hidden");
   });
 });
 
@@ -379,8 +379,10 @@ function wireRoleSelects() {
 
 
 /* =========================
-  ADMIN - ČLANI DRUŠTVA
+  ADMIN - ČLANI DRUŠTVA (+ filtri/iskanje/sort)
 ========================= */
+let adminMembersCache = [];
+
 async function loadOrgMembers() {
   const list = document.getElementById("orgMembersList");
   if (!list) return;
@@ -388,11 +390,40 @@ async function loadOrgMembers() {
   const res = await fetch("/api/admin/users", { credentials: "include" });
   if (!res.ok) return;
 
-  const members = await res.json();
+  adminMembersCache = await res.json();
+  renderOrgMembersList();
+}
+
+function renderOrgMembersList() {
+  const list = document.getElementById("orgMembersList");
+  if (!list) return;
+
+  const query = (document.getElementById("membersSearch")?.value || "").trim().toLowerCase();
+  const statusFilter = document.getElementById("membersStatusFilter")?.value || "ALL";
+  const roleFilter = document.getElementById("membersRoleFilter")?.value || "ALL";
+  const sortMode = document.getElementById("membersSort")?.value || "last_asc";
+
+  let members = adminMembersCache.filter(m => {
+    if (query && !m.first_name.toLowerCase().startsWith(query) && !m.last_name.toLowerCase().startsWith(query)) return false;
+    if (statusFilter === "ACTIVE" && !m.is_active) return false;
+    if (statusFilter === "INACTIVE" && m.is_active) return false;
+    if (roleFilter !== "ALL" && m.role !== roleFilter) return false;
+    return true;
+  });
+
+  const [sortField, sortDir] = sortMode.split("_");
+  const sortKey = sortField === "first" ? "first_name" : "last_name";
+
+  members = [...members].sort((a, b) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1; // neaktivni vedno na dno
+
+    const cmp = a[sortKey].localeCompare(b[sortKey], "sl");
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   list.innerHTML = members.length
     ? members.map(renderOrgMember).join("")
-    : "<li>Ni še članov</li>";
+    : "<li>Ni članov, ki bi ustrezali filtru</li>";
 
   wireRoleSelects();
 
@@ -473,6 +504,11 @@ async function loadOrgMembers() {
     });
   });
 }
+
+document.getElementById("membersSearch")?.addEventListener("input", renderOrgMembersList);
+document.getElementById("membersStatusFilter")?.addEventListener("change", renderOrgMembersList);
+document.getElementById("membersRoleFilter")?.addEventListener("change", renderOrgMembersList);
+document.getElementById("membersSort")?.addEventListener("change", renderOrgMembersList);
 
 function renderOrgMember(m) {
   const isSelf = m.id === currentUserId;
@@ -776,6 +812,9 @@ async function loadTeamsView() {
   await loadTeamList();
 }
 
+let teamMembersCache = [];
+let teamSelectedMemberIds = new Set();
+
 async function loadTeamMemberCheckboxes() {
   const container = document.getElementById("teamMemberCheckboxes");
   if (!container) return;
@@ -783,17 +822,50 @@ async function loadTeamMemberCheckboxes() {
   const res = await fetch("/api/work/organization-members", { credentials: "include" });
   if (!res.ok) return;
 
-  const members = await res.json();
+  teamMembersCache = await res.json();
+  renderTeamMemberCheckboxes();
+}
+
+function renderTeamMemberCheckboxes() {
+  const container = document.getElementById("teamMemberCheckboxes");
+  if (!container) return;
+
+  const query = (document.getElementById("teamMemberSearch")?.value || "").trim().toLowerCase();
+  const sortMode = document.getElementById("teamMemberSort")?.value || "first_asc";
+
+  let members = teamMembersCache.filter(m => {
+    if (!query) return true;
+    return m.first_name.toLowerCase().startsWith(query) || m.last_name.toLowerCase().startsWith(query);
+  });
+
+  const [sortField, sortDir] = sortMode.split("_");
+  const sortKey = sortField === "first" ? "first_name" : "last_name";
+
+  members = [...members].sort((a, b) => {
+    const cmp = a[sortKey].localeCompare(b[sortKey], "sl");
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   container.innerHTML = members.length
     ? members.map(m => `
         <label>
-          <input type="checkbox" class="teamMemberCheckbox" value="${m.id}">
+          <input type="checkbox" class="teamMemberCheckbox" value="${m.id}" ${teamSelectedMemberIds.has(m.id) ? "checked" : ""}>
           ${m.first_name} ${m.last_name}
         </label>
       `).join("")
-    : "<span>Ni članov v društvu</span>";
+    : "<span>Ni ujemajočih se članov</span>";
+
+  container.querySelectorAll(".teamMemberCheckbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const id = Number(cb.value);
+      if (cb.checked) teamSelectedMemberIds.add(id);
+      else teamSelectedMemberIds.delete(id);
+    });
+  });
 }
+
+document.getElementById("teamMemberSearch")?.addEventListener("input", renderTeamMemberCheckboxes);
+document.getElementById("teamMemberSort")?.addEventListener("change", renderTeamMemberCheckboxes);
 
 async function loadTeamList() {
   const list = document.getElementById("teamList");
@@ -824,12 +896,13 @@ async function loadTeamList() {
       editingTeamId = team.id;
       document.getElementById("teamName").value = team.name;
 
-      document.querySelectorAll(".teamMemberCheckbox").forEach(cb => {
-        cb.checked = team.member_ids.includes(Number(cb.value));
-      });
+      teamSelectedMemberIds = new Set(team.member_ids);
+      renderTeamMemberCheckboxes();
 
       document.getElementById("saveTeamBtn").innerText = "Posodobi ekipo";
       document.getElementById("cancelTeamEditBtn").classList.remove("hidden");
+
+      list.closest(".view")?.querySelector('.subtab-btn[data-subtab="add"]')?.click();
     });
   });
 
@@ -858,8 +931,7 @@ document.getElementById("saveTeamBtn")?.addEventListener("click", async () => {
     return;
   }
 
-  const member_ids = Array.from(document.querySelectorAll(".teamMemberCheckbox:checked"))
-    .map(cb => Number(cb.value));
+  const member_ids = Array.from(teamSelectedMemberIds);
 
   const url = editingTeamId ? `/api/admin/teams/${editingTeamId}` : "/api/admin/teams";
   const method = editingTeamId ? "PUT" : "POST";
@@ -888,7 +960,8 @@ function resetTeamForm() {
   editingTeamId = null;
 
   document.getElementById("teamName").value = "";
-  document.querySelectorAll(".teamMemberCheckbox").forEach(cb => cb.checked = false);
+  teamSelectedMemberIds.clear();
+  renderTeamMemberCheckboxes();
   document.getElementById("saveTeamBtn").innerText = "Ustvari ekipo";
   document.getElementById("cancelTeamEditBtn").classList.add("hidden");
   document.getElementById("teamMsg").innerText = "";

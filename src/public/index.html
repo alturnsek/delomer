@@ -126,11 +126,32 @@
           <button type="button" class="subtab-btn" id="addMembersSubtabBtn" data-subtab="add">Dodajanje članov</button>
         </div>
 
-        <div id="membersSubtab-list" class="subtab-panel">
+        <div class="subtab-panel" data-subtab-panel="list">
+          <div class="participant-controls">
+            <input id="membersSearch" placeholder="Išči po imenu ali priimku...">
+            <select id="membersStatusFilter">
+              <option value="ALL">Vsi statusi</option>
+              <option value="ACTIVE">Aktivni</option>
+              <option value="INACTIVE">Neaktivni</option>
+            </select>
+            <select id="membersRoleFilter">
+              <option value="ALL">Vse vloge</option>
+              <option value="MEMBER">Član</option>
+              <option value="SUPERINTENDENT">Nadzornik</option>
+              <option value="ADMIN">Administrator</option>
+            </select>
+            <select id="membersSort">
+              <option value="first_asc">Ime A-Ž</option>
+              <option value="first_desc">Ime Ž-A</option>
+              <option value="last_asc">Priimek A-Ž</option>
+              <option value="last_desc">Priimek Ž-A</option>
+            </select>
+          </div>
+
           <ul id="orgMembersList"></ul>
         </div>
 
-        <div id="membersSubtab-add" class="subtab-panel hidden">
+        <div class="subtab-panel hidden" data-subtab-panel="add">
           <div class="work-form">
             <input id="inviteFirst" placeholder="Ime">
             <input id="inviteLast" placeholder="Priimek">
@@ -216,15 +237,35 @@
       <section id="view-teams" class="view hidden">
         <h2>Ekipe</h2>
 
-        <div class="work-form">
-          <input id="teamName" placeholder="Ime ekipe">
-          <div id="teamMemberCheckboxes" class="checkbox-list"></div>
-          <button id="saveTeamBtn">Ustvari ekipo</button>
-          <button id="cancelTeamEditBtn" class="hidden secondary-btn">Prekliči urejanje</button>
-          <div id="teamMsg" class="error"></div>
+        <div class="subtabs">
+          <button type="button" class="subtab-btn active" data-subtab="list">Ekipe</button>
+          <button type="button" class="subtab-btn" data-subtab="add">Dodajanje ekip</button>
         </div>
 
-        <ul id="teamList"></ul>
+        <div class="subtab-panel" data-subtab-panel="list">
+          <ul id="teamList"></ul>
+        </div>
+
+        <div class="subtab-panel hidden" data-subtab-panel="add">
+          <div class="work-form">
+            <input id="teamName" placeholder="Ime ekipe">
+
+            <div class="participant-controls">
+              <input id="teamMemberSearch" placeholder="Išči po imenu ali priimku...">
+              <select id="teamMemberSort">
+                <option value="first_asc">Ime A-Ž</option>
+                <option value="first_desc">Ime Ž-A</option>
+                <option value="last_asc">Priimek A-Ž</option>
+                <option value="last_desc">Priimek Ž-A</option>
+              </select>
+            </div>
+
+            <div id="teamMemberCheckboxes" class="checkbox-list"></div>
+            <button id="saveTeamBtn">Ustvari ekipo</button>
+            <button id="cancelTeamEditBtn" class="hidden secondary-btn">Prekliči urejanje</button>
+            <div id="teamMsg" class="error"></div>
+          </div>
+        </div>
       </section>
 
       <!-- POTRJEVANJE DELA -->
