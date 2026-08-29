@@ -111,6 +111,20 @@ async function issueAndSendInvite(userId, email) {
   await sendInviteEmail(email, token);
 }
 
+// Obvestilo, da je bil vnos dela zavrnjen (razlog priloži admin/nadzornik ob zavrnitvi).
+async function sendWorkRejectedEmail(email, firstName, task, reason) {
+  await deliverEmail({
+    to: email,
+    subject: "Vaš vnos dela je bil zavrnjen",
+    html: `<p>Pozdravljeni${firstName ? " " + firstName : ""},</p>
+           <p>Vaš vnos dela "${task}" je bil zavrnjen.</p>
+           <p>Razlog: ${reason}</p>
+           <p>Vnos lahko popravite in ponovno oddate v aplikaciji Delomer.</p>`,
+    logLabel: "WORK_REJECTED",
+    fallbackText: `Vnos "${task}" zavrnjen - razlog: ${reason}`
+  });
+}
+
 // Obvestilo ob samopostrežni registraciji preko registracijske povezave društva
 // (varnostni ukrep - da lastnik emaila ve, da je bil ravnokar ustvarjen račun).
 async function sendAccountClaimedEmail(email, organizationName) {
@@ -129,5 +143,6 @@ module.exports = {
   sendInviteEmail,
   sendPasswordChangedEmail,
   issueAndSendInvite,
-  sendAccountClaimedEmail
+  sendAccountClaimedEmail,
+  sendWorkRejectedEmail
 };

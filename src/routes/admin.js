@@ -4,7 +4,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
-const { createInviteToken, sendInviteEmail, issueAndSendInvite } = require("../utils/invites");
+const { createInviteToken, sendInviteEmail, issueAndSendInvite, sendWorkRejectedEmail } = require("../utils/invites");
 const { serializeRow, attachParticipants, resolveOrgParticipants, saveParticipants } = require("../utils/workLogs");
 const { uploadLogo } = require("../middleware/upload");
 
@@ -712,6 +712,17 @@ router.post("/work/:id/reject", async (req, res) => {
 
     if (!result.affectedRows) {
       return res.status(404).json({ message: "Ni najdeno" });
+    }
+
+    const creatorRows = await db.query(
+      `SELECT users.email, users.first_name, work_logs.task
+       FROM work_logs JOIN users ON users.id = work_logs.user_id
+       WHERE work_logs.id = ?`,
+      [req.params.id]
+    );
+
+    if (creatorRows[0]?.email) {
+      await sendWorkRejectedEmail(creatorRows[0].email, creatorRows[0].first_name, creatorRows[0].task, reason);
     }
 
     res.json({ message: "Zavrnjeno" });
