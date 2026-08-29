@@ -185,7 +185,7 @@ code {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 240px; /* cca. 8 vrstic pri 16px fontu */
+  height: 240px; /* cca. 8 vrstic pri 16px fontu - fiksna, uporabnik jo lahko razširi (resize) */
   overflow: auto;
   resize: vertical;
   padding: 10px;
