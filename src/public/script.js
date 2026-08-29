@@ -515,15 +515,22 @@ function renderOrgAdminsList() {
   if (!list || !organizationId) return;
 
   const query = (document.getElementById("orgAdminsSearch")?.value || "").trim().toLowerCase();
-  const statusFilter = document.getElementById("orgAdminsStatusFilter")?.value || "ALL";
-  const roleFilter = document.getElementById("orgAdminsRoleFilter")?.value || "ALL";
+  const statusFilters = Array.from(document.querySelectorAll("#orgAdminsStatusPanel input:checked")).map(cb => cb.value);
+  const roleFilters = Array.from(document.querySelectorAll("#orgAdminsRolePanel input:checked")).map(cb => cb.value);
   const sortMode = document.getElementById("orgAdminsSort")?.value || "last_asc";
 
   let members = orgAdminsMembersCache.filter(m => {
     if (query && !m.first_name.toLowerCase().startsWith(query) && !m.last_name.toLowerCase().startsWith(query)) return false;
-    if (statusFilter === "ACTIVE" && !m.is_active) return false;
-    if (statusFilter === "INACTIVE" && m.is_active) return false;
-    if (roleFilter !== "ALL" && m.role !== roleFilter) return false;
+
+    if (statusFilters.length) {
+      const buckets = [m.is_active ? "ACTIVE" : "INACTIVE"];
+      if (!m.email) buckets.push("NO_EMAIL");
+      else if (!m.activated) buckets.push("PENDING");
+      if (!buckets.some(b => statusFilters.includes(b))) return false;
+    }
+
+    if (roleFilters.length && !roleFilters.includes(m.role)) return false;
+
     return true;
   });
 
@@ -722,8 +729,8 @@ document.getElementById("orgAdminsBulkDeleteBtn")?.addEventListener("click", asy
 });
 
 document.getElementById("orgAdminsSearch")?.addEventListener("input", renderOrgAdminsList);
-document.getElementById("orgAdminsStatusFilter")?.addEventListener("change", renderOrgAdminsList);
-document.getElementById("orgAdminsRoleFilter")?.addEventListener("change", renderOrgAdminsList);
+setupDropdownCheckFilter("orgAdminsStatusBtn", "orgAdminsStatusPanel", "Status", renderOrgAdminsList);
+setupDropdownCheckFilter("orgAdminsRoleBtn", "orgAdminsRolePanel", "Vloga", renderOrgAdminsList);
 document.getElementById("orgAdminsSort")?.addEventListener("change", renderOrgAdminsList);
 
 function renderRoleManagedMember(m, roleEndpointBase) {
@@ -825,15 +832,22 @@ function renderOrgMembersList() {
   if (!list) return;
 
   const query = (document.getElementById("membersSearch")?.value || "").trim().toLowerCase();
-  const statusFilter = document.getElementById("membersStatusFilter")?.value || "ALL";
-  const roleFilter = document.getElementById("membersRoleFilter")?.value || "ALL";
+  const statusFilters = Array.from(document.querySelectorAll("#membersStatusPanel input:checked")).map(cb => cb.value);
+  const roleFilters = Array.from(document.querySelectorAll("#membersRolePanel input:checked")).map(cb => cb.value);
   const sortMode = document.getElementById("membersSort")?.value || "last_asc";
 
   let members = adminMembersCache.filter(m => {
     if (query && !m.first_name.toLowerCase().startsWith(query) && !m.last_name.toLowerCase().startsWith(query)) return false;
-    if (statusFilter === "ACTIVE" && !m.is_active) return false;
-    if (statusFilter === "INACTIVE" && m.is_active) return false;
-    if (roleFilter !== "ALL" && m.role !== roleFilter) return false;
+
+    if (statusFilters.length) {
+      const buckets = [m.is_active ? "ACTIVE" : "INACTIVE"];
+      if (!m.email) buckets.push("NO_EMAIL");
+      else if (!m.activated) buckets.push("PENDING");
+      if (!buckets.some(b => statusFilters.includes(b))) return false;
+    }
+
+    if (roleFilters.length && !roleFilters.includes(m.role)) return false;
+
     return true;
   });
 
@@ -948,8 +962,8 @@ function renderOrgMembersList() {
 }
 
 document.getElementById("membersSearch")?.addEventListener("input", renderOrgMembersList);
-document.getElementById("membersStatusFilter")?.addEventListener("change", renderOrgMembersList);
-document.getElementById("membersRoleFilter")?.addEventListener("change", renderOrgMembersList);
+setupDropdownCheckFilter("membersStatusBtn", "membersStatusPanel", "Status", renderOrgMembersList);
+setupDropdownCheckFilter("membersRoleBtn", "membersRolePanel", "Vloga", renderOrgMembersList);
 document.getElementById("membersSort")?.addEventListener("change", renderOrgMembersList);
 
 function renderOrgMember(m) {

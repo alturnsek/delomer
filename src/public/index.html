@@ -130,17 +130,24 @@
         <div class="subtab-panel" data-subtab-panel="list">
           <div class="participant-controls">
             <input id="membersSearch" placeholder="Išči po imenu ali priimku...">
-            <select id="membersStatusFilter">
-              <option value="ALL">Vsi statusi</option>
-              <option value="ACTIVE">Aktivni</option>
-              <option value="INACTIVE">Neaktivni</option>
-            </select>
-            <select id="membersRoleFilter">
-              <option value="ALL">Vse vloge</option>
-              <option value="MEMBER">Član</option>
-              <option value="SUPERINTENDENT">Nadzornik</option>
-              <option value="ADMIN">Administrator</option>
-            </select>
+            <div class="dropdown-check-filter">
+              <button type="button" class="dropdown-check-btn" id="membersStatusBtn" data-target="membersStatusPanel">Status: Vsi ▾</button>
+              <div class="dropdown-check-panel hidden" id="membersStatusPanel">
+                <label><input type="checkbox" value="ACTIVE"> Aktiven</label>
+                <label><input type="checkbox" value="INACTIVE"> Neaktiven</label>
+                <label><input type="checkbox" value="NO_EMAIL"> Brez emaila</label>
+                <label><input type="checkbox" value="PENDING"> Čaka aktivacijo</label>
+              </div>
+            </div>
+            <div class="dropdown-check-filter">
+              <button type="button" class="dropdown-check-btn" id="membersRoleBtn" data-target="membersRolePanel">Vloga: Vse ▾</button>
+              <div class="dropdown-check-panel hidden" id="membersRolePanel">
+                <label><input type="checkbox" value="MEMBER"> Član</label>
+                <label><input type="checkbox" value="SUPERINTENDENT"> Nadzornik</label>
+                <label><input type="checkbox" value="ADMIN"> Administrator</label>
+                <label><input type="checkbox" value="PUBLIC"> Javni (kiosk)</label>
+              </div>
+            </div>
             <select id="membersSort">
               <option value="first_asc">Ime A-Ž</option>
               <option value="first_desc">Ime Ž-A</option>
@@ -542,17 +549,24 @@
 
         <div class="participant-controls">
           <input id="orgAdminsSearch" placeholder="Išči po imenu ali priimku...">
-          <select id="orgAdminsStatusFilter">
-            <option value="ALL">Vsi statusi</option>
-            <option value="ACTIVE">Aktivni</option>
-            <option value="INACTIVE">Neaktivni</option>
-          </select>
-          <select id="orgAdminsRoleFilter">
-            <option value="ALL">Vse vloge</option>
-            <option value="MEMBER">Član</option>
-            <option value="SUPERINTENDENT">Nadzornik</option>
-            <option value="ADMIN">Administrator</option>
-          </select>
+          <div class="dropdown-check-filter">
+            <button type="button" class="dropdown-check-btn" id="orgAdminsStatusBtn" data-target="orgAdminsStatusPanel">Status: Vsi ▾</button>
+            <div class="dropdown-check-panel hidden" id="orgAdminsStatusPanel">
+              <label><input type="checkbox" value="ACTIVE"> Aktiven</label>
+              <label><input type="checkbox" value="INACTIVE"> Neaktiven</label>
+              <label><input type="checkbox" value="NO_EMAIL"> Brez emaila</label>
+              <label><input type="checkbox" value="PENDING"> Čaka aktivacijo</label>
+            </div>
+          </div>
+          <div class="dropdown-check-filter">
+            <button type="button" class="dropdown-check-btn" id="orgAdminsRoleBtn" data-target="orgAdminsRolePanel">Vloga: Vse ▾</button>
+            <div class="dropdown-check-panel hidden" id="orgAdminsRolePanel">
+              <label><input type="checkbox" value="MEMBER"> Član</label>
+              <label><input type="checkbox" value="SUPERINTENDENT"> Nadzornik</label>
+              <label><input type="checkbox" value="ADMIN"> Administrator</label>
+              <label><input type="checkbox" value="PUBLIC"> Javni (kiosk)</label>
+            </div>
+          </div>
           <select id="orgAdminsSort">
             <option value="first_asc">Ime A-Ž</option>
             <option value="first_desc">Ime Ž-A</option>
