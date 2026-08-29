@@ -5,7 +5,6 @@ const sidebar = document.getElementById("sidebar");
 const taskInput = document.getElementById("task");
 const taskCount = document.getElementById("taskCount");
 
-let workToDelete = null;
 let editingWorkId = null;
 let editingTeamId = null;
 let currentUserId = null;
@@ -58,6 +57,29 @@ function memberCountLabel(n) {
   }
 
   return `${n} ${word}`;
+}
+
+/* =========================
+  STILIZIRAN POTRDITVENI POPUP (namesto brskalnikovega confirm())
+========================= */
+function showConfirmModal(message, onConfirm, confirmLabel) {
+  const modal = document.getElementById("confirmModal");
+  const yesBtn = document.getElementById("confirmYes");
+  const noBtn = document.getElementById("confirmNo");
+  if (!modal || !yesBtn || !noBtn) return;
+
+  modal.querySelector("p").innerText = message;
+  yesBtn.innerText = confirmLabel || "Izbriši";
+  modal.classList.add("show");
+
+  yesBtn.onclick = async () => {
+    modal.classList.remove("show");
+    await onConfirm();
+  };
+
+  noBtn.onclick = () => {
+    modal.classList.remove("show");
+  };
 }
 
 /* =========================
@@ -614,25 +636,28 @@ function renderOrgAdminsList() {
   });
 
   document.querySelectorAll(".deleteRoleManagedBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       const id = btn.dataset.id;
 
-      if (!confirm("Izbrišeš uporabnika? Če ima že vneseno delo, bo namesto izbrisa anonimiziran (ure ostanejo).")) return;
+      showConfirmModal(
+        "Izbrišeš uporabnika? Če ima že vneseno delo, bo namesto izbrisa anonimiziran (ure ostanejo).",
+        async () => {
+          const res = await fetch(`${btn.dataset.orgEndpoint}/${id}`, {
+            method: "DELETE",
+            credentials: "include"
+          });
 
-      const res = await fetch(`${btn.dataset.orgEndpoint}/${id}`, {
-        method: "DELETE",
-        credentials: "include"
-      });
+          const data = await res.json();
 
-      const data = await res.json();
+          if (!res.ok) {
+            alert(data.message || "Napaka pri izbrisu");
+            return;
+          }
 
-      if (!res.ok) {
-        alert(data.message || "Napaka pri izbrisu");
-        return;
-      }
-
-      bulkSelectedOrgAdminIds.delete(Number(id));
-      loadOrgAdminsUsers(organizationId);
+          bulkSelectedOrgAdminIds.delete(Number(id));
+          loadOrgAdminsUsers(organizationId);
+        }
+      );
     });
   });
 
@@ -704,28 +729,31 @@ document.getElementById("orgAdminsBulkDeleteBtn")?.addEventListener("click", asy
     return;
   }
 
-  if (!confirm(`Izbrišeš ${ids.length} izbranih uporabnikov? Tisti z že vnesenim delom bodo namesto izbrisa anonimizirani.`)) return;
+  showConfirmModal(
+    `Izbrišeš ${ids.length} izbranih uporabnikov? Tisti z že vnesenim delom bodo namesto izbrisa anonimizirani.`,
+    async () => {
+      const res = await fetch(`/api/superadmin/organizations/${currentOrgAdminsOrgId}/users/bulk-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ user_ids: ids })
+      });
 
-  const res = await fetch(`/api/superadmin/organizations/${currentOrgAdminsOrgId}/users/bulk-delete`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ user_ids: ids })
-  });
+      const data = await res.json();
 
-  const data = await res.json();
+      if (!res.ok) {
+        msg.innerText = data.message || "Napaka";
+        return;
+      }
 
-  if (!res.ok) {
-    msg.innerText = data.message || "Napaka";
-    return;
-  }
+      const okCount = data.results.filter(r => r.ok).length;
+      msg.style.color = "#16a34a";
+      msg.innerText = `Izbrisanih: ${okCount}/${data.results.length}`;
 
-  const okCount = data.results.filter(r => r.ok).length;
-  msg.style.color = "#16a34a";
-  msg.innerText = `Izbrisanih: ${okCount}/${data.results.length}`;
-
-  bulkSelectedOrgAdminIds.clear();
-  loadOrgAdminsUsers(currentOrgAdminsOrgId);
+      bulkSelectedOrgAdminIds.clear();
+      loadOrgAdminsUsers(currentOrgAdminsOrgId);
+    }
+  );
 });
 
 document.getElementById("orgAdminsSearch")?.addEventListener("input", renderOrgAdminsList);
@@ -1419,15 +1447,15 @@ async function loadTeamList() {
   });
 
   list.querySelectorAll(".deleteTeamBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      if (!confirm("Izbriši to ekipo?")) return;
+    btn.addEventListener("click", () => {
+      showConfirmModal("Izbriši to ekipo?", async () => {
+        await fetch(`/api/admin/teams/${btn.dataset.id}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
 
-      await fetch(`/api/admin/teams/${btn.dataset.id}`, {
-        method: "DELETE",
-        credentials: "include"
+        loadTeamList();
       });
-
-      loadTeamList();
     });
   });
 }
@@ -1548,29 +1576,33 @@ document.getElementById("registrationEnabledToggle")?.addEventListener("change",
   currentOrgSettings.registration_enabled = e.target.checked ? 1 : 0;
 });
 
-document.getElementById("regenerateJoinCodeBtn")?.addEventListener("click", async () => {
+document.getElementById("regenerateJoinCodeBtn")?.addEventListener("click", () => {
   const msg = document.getElementById("joinCodeMsg");
   msg.innerText = "";
   msg.style.color = "";
 
-  if (!confirm("Stara registracijska povezava bo prenehala delovati. Nadaljuješ?")) return;
+  showConfirmModal(
+    "Stara registracijska povezava bo prenehala delovati. Nadaljuješ?",
+    async () => {
+      const res = await fetch("/api/admin/organization/join-code/regenerate", {
+        method: "POST",
+        credentials: "include"
+      });
 
-  const res = await fetch("/api/admin/organization/join-code/regenerate", {
-    method: "POST",
-    credentials: "include"
-  });
+      const data = await res.json();
 
-  const data = await res.json();
+      if (!res.ok) {
+        msg.innerText = data.message || "Napaka";
+        return;
+      }
 
-  if (!res.ok) {
-    msg.innerText = data.message || "Napaka";
-    return;
-  }
-
-  currentOrgSettings.join_code = data.join_code;
-  document.getElementById("joinCodeUrl").value = `${window.location.origin}/join.html?code=${data.join_code}`;
-  msg.style.color = "#16a34a";
-  msg.innerText = "Nova povezava ustvarjena";
+      currentOrgSettings.join_code = data.join_code;
+      document.getElementById("joinCodeUrl").value = `${window.location.origin}/join.html?code=${data.join_code}`;
+      msg.style.color = "#16a34a";
+      msg.innerText = "Nova povezava ustvarjena";
+    },
+    "Ustvari novo"
+  );
 });
 
 document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async () => {
@@ -1682,15 +1714,15 @@ async function loadOfficials() {
   });
 
   document.querySelectorAll(".deleteOfficialBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      if (!confirm("Izbriši tega funkcionarja?")) return;
+    btn.addEventListener("click", () => {
+      showConfirmModal("Izbriši tega funkcionarja?", async () => {
+        await fetch(`/api/admin/officials/${btn.dataset.id}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
 
-      await fetch(`/api/admin/officials/${btn.dataset.id}`, {
-        method: "DELETE",
-        credentials: "include"
+        loadOfficials();
       });
-
-      loadOfficials();
     });
   });
 }
@@ -2167,13 +2199,18 @@ async function loadWork() {
   });
 
 
-  // DELETE (odpre modal)
+  // DELETE (odpre stiliziran potrditveni popup)
 
   document.querySelectorAll(".deleteBtn").forEach(btn => {
     btn.addEventListener("click", () => {
-      workToDelete = btn.dataset.id;
+      showConfirmModal("Ali res želiš izbrisati vnos?", async () => {
+        await fetch(`/api/work/${btn.dataset.id}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
 
-      document.getElementById("confirmModal").classList.add("show");
+        loadWork();
+      });
     });
   });
 
@@ -2835,37 +2872,6 @@ function formatDate(dateStr) {
 
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-
-  const confirmYes = document.getElementById("confirmYes");
-  const confirmNo = document.getElementById("confirmNo");
-  const modal = document.getElementById("confirmModal");
-
-  if (!confirmYes || !confirmNo || !modal) return;
-
-  // CONFIRM DELETE
-    confirmYes.addEventListener("click", async () => {
-      if (!workToDelete) return;
-
-      await fetch(`/api/work/${workToDelete}`, {
-        method: "DELETE",
-        credentials: "include"
-      });
-
-      document.getElementById("confirmModal").classList.remove("show");
-
-      workToDelete = null;
-      loadWork();
-    });
-
-    confirmNo.addEventListener("click", () => {
-      workToDelete = null;
-      document.getElementById("confirmModal").classList.remove("show");
-    });
-
-
-});
 
 function resetForm() {
   document.getElementById("task").value = "";
