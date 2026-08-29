@@ -63,6 +63,22 @@ document.querySelectorAll(".nav-link").forEach(link => {
   });
 });
 
+/* =========================
+  POD-ZAVIHKI (npr. Člani: Prikaz/Dodajanje)
+========================= */
+document.querySelectorAll(".subtab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const parent = btn.closest(".view");
+    if (!parent) return;
+
+    parent.querySelectorAll(".subtab-btn").forEach(b => b.classList.remove("active"));
+    parent.querySelectorAll(".subtab-panel").forEach(p => p.classList.add("hidden"));
+
+    btn.classList.add("active");
+    document.getElementById(`membersSubtab-${btn.dataset.subtab}`)?.classList.remove("hidden");
+  });
+});
+
 function isSidebarOpenPreferred() {
   const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
   return stored === null ? true : stored === "1";
@@ -369,6 +385,15 @@ async function loadOrgMembers() {
 
   wireRoleSelects();
 
+  document.getElementById("addMembersSubtabBtn")?.classList.toggle("hidden", currentUserRole !== "ADMIN");
+
+  document.querySelectorAll(".member-name-link").forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      openMemberDetail(link.dataset.id);
+    });
+  });
+
   document.querySelectorAll(".editMemberBtn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.getElementById(`memberEdit-${btn.dataset.id}`)?.classList.toggle("hidden");
@@ -418,23 +443,28 @@ async function loadOrgMembers() {
 
 function renderOrgMember(m) {
   const isSelf = m.id === currentUserId;
+  const canManage = currentUserRole === "ADMIN";
+  const nameHtml = `<a href="#" class="member-name-link" data-id="${m.id}">${m.first_name} ${m.last_name}</a>`;
 
   return `
     <li class="member-item" data-id="${m.id}">
       <div class="member-row">
-        <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
+        <span>${nameHtml} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
         <div class="actions">
-          ${isSelf
+          ${!canManage
             ? `<span class="status-badge">${m.role}</span>`
-            : `<select class="roleSelect" data-id="${m.id}" data-endpoint="/api/admin/users">
-                <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
-                <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
-                <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
-              </select>`
+            : isSelf
+              ? `<span class="status-badge">${m.role}</span>`
+              : `<select class="roleSelect" data-id="${m.id}" data-endpoint="/api/admin/users">
+                  <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
+                  <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
+                  <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
+                </select>`
           }
-          <button class="editMemberBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>
+          ${canManage ? `<button class="editMemberBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>` : ""}
         </div>
       </div>
+      ${canManage ? `
       <div class="edit-panel hidden" id="memberEdit-${m.id}">
         <div class="field">
           <label>Ime</label>
@@ -454,6 +484,7 @@ function renderOrgMember(m) {
           <button class="cancelMemberEditBtn secondary-btn" data-id="${m.id}">Prekliči</button>
         </div>
       </div>
+      ` : ""}
     </li>
   `;
 }
@@ -1284,10 +1315,57 @@ async function addWork() {
 
 
 /* =========================
+  GRAF UR SKOZI ČAS (skupno za "Moj profil" in profil člana)
+========================= */
+const chartInstances = {};
+
+function renderHoursChart(canvasId, data, from, to) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const byDate = Object.fromEntries(data.map(d => [d.date, d.minutes]));
+  const labels = [];
+  const values = [];
+
+  const cursor = new Date(from);
+  const end = new Date(to);
+
+  while (cursor <= end) {
+    const key = formatDateForInput(cursor);
+    labels.push(formatDateDisplay(key));
+    values.push(Math.round(((byDate[key] || 0) / 60) * 100) / 100);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Opravljene ure",
+        data: values,
+        borderColor: "#4f46e5",
+        backgroundColor: "rgba(79,70,229,0.1)",
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+
+/* =========================
   MOJ PROFIL
 ========================= */
-let profileChartInstance = null;
-
 async function loadProfileView() {
   const res = await fetch("/api/users/me", { credentials: "include" });
   const data = await res.json();
@@ -1327,50 +1405,7 @@ async function loadProfileStats() {
   if (!res.ok) return;
 
   const data = await res.json();
-  renderProfileChart(data, from, to);
-}
-
-function renderProfileChart(data, from, to) {
-  const canvas = document.getElementById("profileChart");
-  if (!canvas || typeof Chart === "undefined") return;
-
-  const byDate = Object.fromEntries(data.map(d => [d.date, d.minutes]));
-  const labels = [];
-  const values = [];
-
-  const cursor = new Date(from);
-  const end = new Date(to);
-
-  while (cursor <= end) {
-    const key = formatDateForInput(cursor);
-    labels.push(formatDateDisplay(key));
-    values.push(Math.round(((byDate[key] || 0) / 60) * 100) / 100);
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  if (profileChartInstance) profileChartInstance.destroy();
-
-  profileChartInstance = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "Opravljene ure",
-        data: values,
-        borderColor: "#4f46e5",
-        backgroundColor: "rgba(79,70,229,0.1)",
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
-  });
+  renderHoursChart("profileChart", data, from, to);
 }
 
 document.getElementById("profileStatsFrom")?.addEventListener("change", loadProfileStats);
@@ -1402,6 +1437,55 @@ document.getElementById("avatarInput")?.addEventListener("change", async (e) => 
 
   document.getElementById("profileAvatarImg").src = data.avatar_path;
 });
+
+
+/* =========================
+  PROFIL POSAMEZNEGA ČLANA (ADMIN/SUPERINTENDENT - klik na ime v seznamu)
+========================= */
+let currentMemberDetailId = null;
+
+async function openMemberDetail(userId) {
+  const res = await fetch(`/api/admin/users/${userId}`, { credentials: "include" });
+  if (!res.ok) return;
+
+  const m = await res.json();
+  currentMemberDetailId = m.id;
+
+  document.getElementById("memberDetailFirstName").innerText = m.first_name;
+  document.getElementById("memberDetailLastName").innerText = m.last_name;
+  document.getElementById("memberDetailEmail").innerText = m.email;
+  document.getElementById("memberDetailRole").innerText = m.role;
+  document.getElementById("memberDetailAvatarImg").src = m.avatar_path || "logo.png";
+
+  const now = new Date();
+  const monthAgo = new Date(now);
+  monthAgo.setMonth(now.getMonth() - 1);
+
+  document.getElementById("memberDetailStatsFrom").value = formatDateForInput(monthAgo);
+  document.getElementById("memberDetailStatsTo").value = formatDateForInput(now);
+
+  showView("member-detail");
+  loadMemberDetailStats();
+}
+
+async function loadMemberDetailStats() {
+  if (!currentMemberDetailId) return;
+
+  const from = document.getElementById("memberDetailStatsFrom")?.value;
+  const to = document.getElementById("memberDetailStatsTo")?.value;
+
+  if (!from || !to) return;
+
+  const res = await fetch(`/api/admin/users/${currentMemberDetailId}/stats?from=${from}&to=${to}`, { credentials: "include" });
+  if (!res.ok) return;
+
+  const data = await res.json();
+  renderHoursChart("memberDetailChart", data, from, to);
+}
+
+document.getElementById("memberDetailStatsFrom")?.addEventListener("change", loadMemberDetailStats);
+document.getElementById("memberDetailStatsTo")?.addEventListener("change", loadMemberDetailStats);
+document.getElementById("backToMembersBtn")?.addEventListener("click", () => showView("members"));
 
 
 /* =========================

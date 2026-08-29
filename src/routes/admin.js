@@ -14,9 +14,9 @@ const canManageUsers = requireRole("ADMIN");
 router.use(canManageWork);
 
 /* =========================
-  ČLANI DRUŠTVA
+  ČLANI DRUŠTVA (branje - ADMIN in SUPERINTENDENT, upravljanje samo ADMIN)
 ========================= */
-router.get("/users", canManageUsers, async (req, res) => {
+router.get("/users", async (req, res) => {
   try {
     const rows = await db.query(
       `SELECT id, first_name, last_name, email, role,
@@ -30,6 +30,71 @@ router.get("/users", canManageUsers, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("LIST ORG USERS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  PROFIL ENEGA ČLANA (za ogled iz seznama)
+========================= */
+router.get("/users/:id", async (req, res) => {
+  try {
+    const rows = await db.query(
+      `SELECT id, first_name, last_name, email, role, avatar_path,
+              (password_hash != '') AS activated
+       FROM users
+       WHERE id = ? AND organization_id = ?`,
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    res.json(serializeRow(rows[0]));
+  } catch (err) {
+    console.error("GET USER ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/users/:id/stats", async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "Manjkata from/to parametra" });
+    }
+
+    const userCheck = await db.query(
+      "SELECT id FROM users WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!userCheck.length) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    const rows = await db.query(
+      `SELECT DATE(work_logs.started_at) AS work_date,
+              SUM(COALESCE(work_log_participants.minutes_override,
+                           TIMESTAMPDIFF(MINUTE, work_logs.started_at, work_logs.ended_at))) AS minutes
+       FROM work_logs
+       JOIN work_log_participants ON work_log_participants.work_log_id = work_logs.id
+       WHERE work_log_participants.user_id = ?
+         AND work_logs.status = 'APPROVED'
+         AND DATE(work_logs.started_at) BETWEEN ? AND ?
+       GROUP BY DATE(work_logs.started_at)
+       ORDER BY work_date ASC`,
+      [req.params.id, from, to]
+    );
+
+    res.json(rows.map(r => ({
+      date: r.work_date instanceof Date ? r.work_date.toISOString().slice(0, 10) : r.work_date,
+      minutes: Number(r.minutes)
+    })));
+  } catch (err) {
+    console.error("GET USER STATS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

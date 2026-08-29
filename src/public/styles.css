@@ -499,6 +499,52 @@ button:hover {
   color: white;
 }
 
+.subtabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.subtab-btn {
+  width: auto;
+  background: none;
+  color: #777;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 10px 4px;
+  margin: 0 10px 0 0;
+  font-weight: 600;
+}
+
+.subtab-btn:hover {
+  background: none;
+  color: #333;
+}
+
+.subtab-btn.active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+
+.member-name-link {
+  color: #1a1a1a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.member-name-link:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.back-btn {
+  width: auto;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+}
+
 .profile-card {
   display: flex;
   gap: 24px;

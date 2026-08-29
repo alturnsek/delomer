@@ -56,7 +56,7 @@
   <div id="appLayout" class="hidden app-layout">
     <nav id="sidebar" class="sidebar hidden">
       <a href="#" class="nav-link" data-view="work" data-roles="ADMIN,SUPERINTENDENT,MEMBER">Vnos dela</a>
-      <a href="#" class="nav-link" data-view="members" data-roles="ADMIN">Člani</a>
+      <a href="#" class="nav-link" data-view="members" data-roles="ADMIN,SUPERINTENDENT">Člani</a>
       <a href="#" class="nav-link" data-view="categories" data-roles="ADMIN,SUPERINTENDENT">Kategorije</a>
       <a href="#" class="nav-link" data-view="teams" data-roles="ADMIN,SUPERINTENDENT">Ekipe</a>
       <a href="#" class="nav-link" data-view="approvals" data-roles="ADMIN,SUPERINTENDENT">Potrjevanje dela</a>
@@ -121,22 +121,80 @@
       <section id="view-members" class="view hidden">
         <h2>Društvo — člani</h2>
 
-        <div class="work-form">
-          <input id="inviteFirst" placeholder="Ime">
-          <input id="inviteLast" placeholder="Priimek">
-          <input id="inviteEmail" type="email" placeholder="Email">
-          <button id="inviteUserBtn">Povabi člana</button>
-          <div id="inviteMsg" class="error"></div>
+        <div class="subtabs">
+          <button type="button" class="subtab-btn active" data-subtab="list">Prikaz članov</button>
+          <button type="button" class="subtab-btn" id="addMembersSubtabBtn" data-subtab="add">Dodajanje članov</button>
         </div>
 
-        <div class="work-form">
-          <label>Bulk uvoz — ena vrstica na osebo: <code>Ime,Priimek,Email</code></label>
-          <textarea id="bulkInviteText" rows="5" placeholder="Janez,Novak,janez@primer.si"></textarea>
-          <button id="bulkInviteBtn">Povabi vse</button>
-          <div id="bulkInviteMsg" class="error"></div>
+        <div id="membersSubtab-list" class="subtab-panel">
+          <ul id="orgMembersList"></ul>
         </div>
 
-        <ul id="orgMembersList"></ul>
+        <div id="membersSubtab-add" class="subtab-panel hidden">
+          <div class="work-form">
+            <input id="inviteFirst" placeholder="Ime">
+            <input id="inviteLast" placeholder="Priimek">
+            <input id="inviteEmail" type="email" placeholder="Email">
+            <button id="inviteUserBtn">Povabi člana</button>
+            <div id="inviteMsg" class="error"></div>
+          </div>
+
+          <div class="work-form">
+            <label>Bulk uvoz — ena vrstica na osebo: <code>Ime,Priimek,Email</code></label>
+            <textarea id="bulkInviteText" rows="5" placeholder="Janez,Novak,janez@primer.si"></textarea>
+            <button id="bulkInviteBtn">Povabi vse</button>
+            <div id="bulkInviteMsg" class="error"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFIL POSAMEZNEGA ČLANA (odpre se s klikom na ime v seznamu) -->
+      <section id="view-member-detail" class="view hidden">
+        <button type="button" id="backToMembersBtn" class="secondary-btn back-btn">← Nazaj na člane</button>
+
+        <div class="profile-card">
+          <div class="profile-avatar-wrap">
+            <img id="memberDetailAvatarImg" src="logo.png" alt="Profilna slika" class="profile-avatar">
+          </div>
+
+          <div class="profile-info">
+            <div class="field">
+              <label>Ime</label>
+              <div id="memberDetailFirstName" class="profile-value"></div>
+            </div>
+            <div class="field">
+              <label>Priimek</label>
+              <div id="memberDetailLastName" class="profile-value"></div>
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <div id="memberDetailEmail" class="profile-value"></div>
+            </div>
+            <div class="field">
+              <label>Vloga</label>
+              <div id="memberDetailRole" class="profile-value"></div>
+            </div>
+          </div>
+        </div>
+
+        <h2>Statistika dela</h2>
+
+        <div class="work-form">
+          <div class="row">
+            <div class="field">
+              <label>Od datuma</label>
+              <input type="date" id="memberDetailStatsFrom">
+            </div>
+            <div class="field">
+              <label>Do datuma</label>
+              <input type="date" id="memberDetailStatsTo">
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="memberDetailChart"></canvas>
+        </div>
       </section>
 
       <!-- KATEGORIJE DELA -->

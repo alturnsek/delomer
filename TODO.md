@@ -51,6 +51,7 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 - [x] Admin vabi uporabnike (posamič + bulk), vidi seznam članov z aktivacijskim statusom — `POST/GET /api/admin/users`, `POST /api/admin/users/bulk`
 - [x] Admin ureja podatke člana (ime/priimek/email) — `PUT /api/admin/users/:id`
 - [x] Admin (ne pa SUPERINTENDENT) spreminja vlogo člana do vključno ADMIN — `POST /api/admin/users/:id/role`; SUPER_ADMIN enako za katerokoli društvo — `POST /api/superadmin/organizations/:id/users/:userId/role`
+- [x] "Člani" je zdaj razdeljen na pod-zavihka **Prikaz** (branje - dovoljeno ADMIN in SUPERINTENDENT) in **Dodajanje** (invite/bulk - samo ADMIN). Klik na ime člana v seznamu odpre njegov profil (`GET /api/admin/users/:id`) z grafom njegove statistike dela (`GET /api/admin/users/:id/stats`) - na voljo tako ADMIN-u kot SUPERINTENDENT-u.
 - [ ] Admin lahko uporabnika tudi deaktivira (samo sprememba vloge/podatkov, ni "onemogoči prijavo")
 - [ ] Granularnejši permission sistem (trenutno samo groba delitev ADMIN/SUPERINTENDENT/MEMBER po routerjih, ne per-akcija)
 
