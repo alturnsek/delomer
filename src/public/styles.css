@@ -257,17 +257,38 @@ code {
   gap: 10px;
 }
 
-.member-edit-panel {
+/* =========================
+  BARVNI SISTEM: uredi = modro, potrdi = zeleno, zavrni = rdeče
+========================= */
+.icon-btn {
+  width: auto;
+  padding: 8px 16px;
+  font-size: 16px;
+  border-radius: 8px;
+  margin-top: 0;
+}
+
+.btn-edit { background: #3b82f6; }
+.btn-edit:hover { background: #2563eb; }
+
+.btn-approve { background: #22c55e; }
+.btn-approve:hover { background: #16a34a; }
+
+.btn-reject { background: #ef4444; }
+.btn-reject:hover { background: #dc2626; }
+
+.edit-panel {
   margin-top: 12px;
   padding: 12px;
-  border: 2px solid #22c55e;
+  border: 2px solid #3b82f6;
   border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.member-edit-panel input {
+.edit-panel input,
+.edit-panel textarea {
   margin: 0;
 }
 
@@ -281,15 +302,14 @@ code {
   margin-top: 0;
 }
 
-.saveMemberBtn {
-  background: #22c55e;
-}
-
-.saveMemberBtn:hover {
-  background: #16a34a;
-}
-
 #adminWorkList .admin-work-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+#categoryList .category-item {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -306,12 +326,8 @@ code {
   gap: 8px;
 }
 
-.confirmRejectBtn {
-  background: #ef4444;
-}
-
-.confirmRejectBtn:hover {
-  background: #dc2626;
+.reject-panel textarea {
+  margin: 0;
 }
 
 .status-badge {
@@ -659,17 +675,16 @@ body:not(.loading) #loader {
 }
 
 .editBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
+  width: auto;
+  padding: 6px 12px;
   font-size: 16px;
-  padding: 0;
-  color: #4f46e5;
+  border-radius: 8px;
+  margin-top: 0;
+  background: #3b82f6;
 }
 
 .editBtn:hover {
-  background-color: white;
-  transform: scale(1.5);
+  background: #2563eb;
 }
 /* =========================
   DELETE BTN
@@ -759,6 +774,6 @@ body:not(.loading) #loader {
 ========================= */
 
 .work-form.editing {
-  border: 2px solid #22c55e;
+  border: 2px solid #3b82f6;
 }
 

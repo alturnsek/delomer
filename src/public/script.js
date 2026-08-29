@@ -17,6 +17,16 @@ const selectedParticipants = new Map(); // userId -> minutesOverride|null
 
 const SIDEBAR_STORAGE_KEY = "delomer_sidebar_open";
 
+const STATUS_LABELS = {
+  PENDING: "V obravnavi",
+  APPROVED: "Potrjeno",
+  REJECTED: "Zavrnjeno"
+};
+
+function statusLabel(status) {
+  return STATUS_LABELS[status] || status;
+}
+
 /* =========================
   VIEW ROUTING (sidebar meni)
 ========================= */
@@ -422,10 +432,10 @@ function renderOrgMember(m) {
                 <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
               </select>`
           }
-          <button class="editMemberBtn" data-id="${m.id}">✏️</button>
+          <button class="editMemberBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>
         </div>
       </div>
-      <div class="member-edit-panel hidden" id="memberEdit-${m.id}">
+      <div class="edit-panel hidden" id="memberEdit-${m.id}">
         <div class="field">
           <label>Ime</label>
           <input class="editFirstName" value="${m.first_name}">
@@ -440,7 +450,7 @@ function renderOrgMember(m) {
         </div>
         <div id="editMemberMsg-${m.id}" class="error"></div>
         <div class="edit-actions">
-          <button class="saveMemberBtn" data-id="${m.id}">Shrani</button>
+          <button class="saveMemberBtn icon-btn btn-edit" data-id="${m.id}">Shrani</button>
           <button class="cancelMemberEditBtn secondary-btn" data-id="${m.id}">Prekliči</button>
         </div>
       </div>
@@ -562,34 +572,68 @@ async function loadCategoriesAdmin() {
 
   list.innerHTML = categories.length
     ? categories.map(c => `
-        <li>
-          <span>${c.name} ${c.is_active ? "" : '<span class="status-badge status-REJECTED">neaktivna</span>'}</span>
-          <div class="actions">
-            <button class="renameCategoryBtn" data-id="${c.id}" data-name="${c.name}">✏️</button>
-            ${c.is_active
-              ? `<button class="deactivateCategoryBtn" data-id="${c.id}">Deaktiviraj</button>`
-              : `<button class="activateCategoryBtn" data-id="${c.id}">Aktiviraj</button>`}
+        <li class="category-item" data-id="${c.id}">
+          <div class="member-row">
+            <span>${c.name} ${c.is_active ? "" : '<span class="status-badge status-REJECTED">neaktivna</span>'}</span>
+            <div class="actions">
+              <button class="editCategoryBtn icon-btn btn-edit" data-id="${c.id}">✏️</button>
+              ${c.is_active
+                ? `<button class="deactivateCategoryBtn" data-id="${c.id}">Deaktiviraj</button>`
+                : `<button class="activateCategoryBtn" data-id="${c.id}">Aktiviraj</button>`}
+            </div>
+          </div>
+          <div class="edit-panel hidden" id="categoryEdit-${c.id}">
+            <div class="field">
+              <label>Ime kategorije</label>
+              <input class="editCategoryName" value="${c.name}">
+            </div>
+            <div id="editCategoryMsg-${c.id}" class="error"></div>
+            <div class="edit-actions">
+              <button class="saveCategoryBtn icon-btn btn-edit" data-id="${c.id}">Shrani</button>
+              <button class="cancelCategoryEditBtn secondary-btn" data-id="${c.id}">Prekliči</button>
+            </div>
           </div>
         </li>
       `).join("")
     : "<li>Ni še kategorij</li>";
 
-  list.querySelectorAll(".renameCategoryBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const newName = prompt("Novo ime kategorije:", btn.dataset.name);
-      if (newName === null || !newName.trim()) return;
+  list.querySelectorAll(".editCategoryBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`categoryEdit-${btn.dataset.id}`)?.classList.toggle("hidden");
+    });
+  });
 
-      const res = await fetch(`/api/admin/categories/${btn.dataset.id}`, {
+  list.querySelectorAll(".cancelCategoryEditBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`categoryEdit-${btn.dataset.id}`)?.classList.add("hidden");
+    });
+  });
+
+  list.querySelectorAll(".saveCategoryBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const panel = document.getElementById(`categoryEdit-${id}`);
+      const newName = panel.querySelector(".editCategoryName").value.trim();
+      const msg = document.getElementById(`editCategoryMsg-${id}`);
+
+      msg.innerText = "";
+
+      if (!newName) {
+        msg.innerText = "Vnesi ime kategorije";
+        return;
+      }
+
+      const res = await fetch(`/api/admin/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: newName.trim() })
+        body: JSON.stringify({ name: newName })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.message || "Napaka");
+        msg.innerText = data.message || "Napaka";
         return;
       }
 
@@ -979,14 +1023,14 @@ function renderAdminWorkItem(w) {
       <div class="member-row">
         <span>
           <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
-          <span class="status-badge status-${w.status}">${w.status}</span>${correctedBadge}<br>
+          <span class="status-badge status-${w.status}">${statusLabel(w.status)}</span>${correctedBadge}<br>
           <small>${w.category_name || "brez kategorije"} · ${hours} h · sodelavci: ${participants || "-"}</small>
           ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog: ${w.rejection_reason}</small>` : ""}
         </span>
         <div class="actions">
           ${w.status === "PENDING" ? `
-            <button class="approveBtn" data-id="${w.id}">✔️</button>
-            <button class="rejectToggleBtn" data-id="${w.id}">✖️</button>
+            <button class="approveBtn icon-btn btn-approve" data-id="${w.id}">✔️</button>
+            <button class="rejectToggleBtn icon-btn btn-reject" data-id="${w.id}">✖️</button>
           ` : ""}
         </div>
       </div>
@@ -998,7 +1042,7 @@ function renderAdminWorkItem(w) {
           </div>
           <div id="rejectMsg-${w.id}" class="error"></div>
           <div class="edit-actions">
-            <button class="confirmRejectBtn" data-id="${w.id}">Zavrni</button>
+            <button class="confirmRejectBtn icon-btn btn-reject" data-id="${w.id}">Zavrni</button>
             <button class="cancelRejectBtn secondary-btn" data-id="${w.id}">Prekliči</button>
           </div>
         </div>
@@ -1041,14 +1085,14 @@ async function loadWork() {
     li.innerHTML = `
       <span>
         ${w.task}
-        <span class="status-badge status-${w.status}">${w.status}</span>${correctedBadge}<br>
+        <span class="status-badge status-${w.status}">${statusLabel(w.status)}</span>${correctedBadge}<br>
         <small>${w.category_name || "brez kategorije"}${participantNames ? " · " + participantNames : ""}</small>
         ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog zavrnitve: ${w.rejection_reason}</small>` : ""}
       </span>
       <div class="actions">
         <strong>${hours} h</strong>
         ${isOwner && !isLocked ? `
-          <button class="editBtn" data-id="${w.id}">✏️</button>
+          <button class="editBtn icon-btn" data-id="${w.id}">✏️</button>
           <button class="deleteBtn" data-id="${w.id}">❌</button>
         ` : ""}
       </div>
@@ -1083,7 +1127,7 @@ async function loadWork() {
 
       const addBtn = document.getElementById("addWorkBtn");
       addBtn.innerText = "Uredi";
-      addBtn.style.background = "#22c55e";
+      addBtn.style.background = "#3b82f6";
 
       document.querySelector(".work-form").classList.add("editing");
     });
