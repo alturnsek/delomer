@@ -48,7 +48,7 @@ const VIEW_LOADERS = {
   teams: () => loadTeamsView(),
   approvals: () => loadAdminWork(),
   "org-stats": () => {},
-  organizations: () => loadOrganizationsSuperadmin(),
+  organizations: () => { loadEmailModeSetting(); loadOrganizationsSuperadmin(); },
   "org-admins": () => loadOrgAdminsOrgOptions(),
   "platform-stats": () => {},
   profile: () => loadProfileView()
@@ -242,6 +242,39 @@ async function login(e) {
 
 
 /* =========================
+  SUPER ADMIN - NASTAVITVE (način pošiljanja emailov)
+========================= */
+async function loadEmailModeSetting() {
+  const select = document.getElementById("emailModeSelect");
+  if (!select) return;
+
+  const res = await fetch("/api/superadmin/settings", { credentials: "include" });
+  if (!res.ok) return;
+
+  const settings = await res.json();
+  select.value = settings.email_mode || "log";
+}
+
+document.getElementById("emailModeSelect")?.addEventListener("change", async (e) => {
+  const msg = document.getElementById("emailModeMsg");
+  msg.innerText = "";
+
+  const res = await fetch("/api/superadmin/settings/email-mode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email_mode: e.target.value })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+  }
+});
+
+
+/* =========================
   SUPER ADMIN - DRUŠTVA
 ========================= */
 async function loadOrganizationsSuperadmin() {
@@ -254,8 +287,74 @@ async function loadOrganizationsSuperadmin() {
   const orgs = await res.json();
 
   list.innerHTML = orgs.length
-    ? orgs.map(o => `<li><span>${o.name}</span><span>${o.member_count} članov</span></li>`).join("")
+    ? orgs.map(renderOrganization).join("")
     : "<li>Ni še nobenega društva</li>";
+
+  document.querySelectorAll(".editOrgBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`orgEdit-${btn.dataset.id}`)?.classList.toggle("hidden");
+    });
+  });
+
+  document.querySelectorAll(".cancelOrgEditBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(`orgEdit-${btn.dataset.id}`)?.classList.add("hidden");
+    });
+  });
+
+  document.querySelectorAll(".saveOrgBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const panel = document.getElementById(`orgEdit-${id}`);
+      const name = panel.querySelector(".editOrgName").value.trim();
+      const msg = document.getElementById(`editOrgMsg-${id}`);
+
+      msg.innerText = "";
+
+      if (!name) {
+        msg.innerText = "Vnesi ime društva";
+        return;
+      }
+
+      const res = await fetch(`/api/superadmin/organizations/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        msg.innerText = data.message || "Napaka";
+        return;
+      }
+
+      loadOrganizationsSuperadmin();
+    });
+  });
+}
+
+function renderOrganization(o) {
+  return `
+    <li class="org-item" data-id="${o.id}">
+      <div class="member-row">
+        <span>${o.name} — ${o.member_count} članov</span>
+        <button class="editOrgBtn icon-btn btn-edit" data-id="${o.id}">✏️</button>
+      </div>
+      <div class="edit-panel hidden" id="orgEdit-${o.id}">
+        <div class="field">
+          <label>Ime društva</label>
+          <input class="editOrgName" value="${o.name}">
+        </div>
+        <div id="editOrgMsg-${o.id}" class="error"></div>
+        <div class="edit-actions">
+          <button class="saveOrgBtn icon-btn btn-edit" data-id="${o.id}">Shrani</button>
+          <button class="cancelOrgEditBtn secondary-btn" data-id="${o.id}">Prekliči</button>
+        </div>
+      </div>
+    </li>
+  `;
 }
 
 document.getElementById("createOrgBtn")?.addEventListener("click", async () => {

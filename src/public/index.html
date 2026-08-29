@@ -315,6 +315,19 @@
 
       <!-- SUPER ADMIN: DRUŠTVA -->
       <section id="view-organizations" class="view hidden">
+        <h2>Nastavitve</h2>
+
+        <div class="work-form">
+          <div class="field">
+            <label>Način pošiljanja emailov (vabila)</label>
+            <select id="emailModeSelect">
+              <option value="log">Izpis v loge (privzeto, brez pravega pošiljanja)</option>
+              <option value="real">Pravi email (Resend)</option>
+            </select>
+          </div>
+          <div id="emailModeMsg" class="error"></div>
+        </div>
+
         <h2>Društva</h2>
 
         <div class="work-form">

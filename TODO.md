@@ -18,7 +18,7 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
   - **SUPERINTENDENT** — enake operativne pravice kot ADMIN (delo, kategorije, potrjevanje, statistika društva), **ne more** upravljati uporabnikov (vabiti/urejati/spreminjati vlog). Dodano na zahtevo, da lahko ADMIN nekoga "dvigne na svoj nivo" brez da mu da nadzor nad člani.
   - **MEMBER** — se aktivira preko povezave iz vabila (`set-password.html?token=...`), vnaša svoja dela in ureja tista, ki jih je sam ustvaril
   - Ni več javne registracije. Nov uporabnik nastane samo, ko ga povabi ADMIN/SUPER_ADMIN (vrstica v `users` z `password_hash=''` in `invite_token`); ob aktivaciji nastavi geslo.
-  - Email pošiljanje je za zdaj samo stub — povezava za nastavitev gesla se izpiše v strežniške loge (`src/utils/invites.js`), pravo pošiljanje (SMTP/Resend/ipd.) je TODO.
+  - Email pošiljanje: `src/utils/invites.js` zna pošiljati preko **Resend** (`RESEND_API_KEY`/`INVITE_EMAIL_FROM` v `.env`), a privzeto je način nastavljen na "log" (samo izpis povezave v loge) - SUPER_ADMIN v "Društva" → "Nastavitve" preklaplja med "log" in "real" (`app_settings.email_mode`, `GET/POST /api/superadmin/settings*`), brez potrebe po redeployu. Za pravo pošiljanje mora biti domena `delomer.top` verificirana pri Resend (SPF/DKIM/DMARC DNS zapisi).
   - Prvi SUPER_ADMIN nastane ročno z SQL (`UPDATE users SET role='SUPER_ADMIN' WHERE email=...`, glej [migrations/002_super_admin_and_invites.sql](migrations/002_super_admin_and_invites.sql)), ne preko kode.
   - **Pravice so trenutno samo dvo-nivojske sklope** (`requireRole("ADMIN","SUPERINTENDENT")` vs `requireRole("ADMIN")`), ne granularen permission sistem. Eksplicitno dogovorjeno, da se bo to še razširilo, ko bo jasno kdo natančno sme kaj — glej spodaj.
 - **UI**: aplikacija je iz ene monolitne strani prestrukturirana v sidebar/burger meni (`#sidebar`, `.nav-link[data-view]` + `.view` sekcije v [src/public/index.html](src/public/index.html), routing v `showView()` v [src/public/script.js](src/public/script.js)). Nav linki se filtrirajo po `data-roles` glede na vlogo prijavljenega uporabnika. Burger gumb (☰, skrajno levo v headerju) je toggle, stanje odprto/zaprto si zapomni v `localStorage` (per-brskalnik, ne na strežniku). Sidebar je `position: fixed` overlay na skrajnem levem robu zaslona (ne flex-sibling od contenta), zato se content ne oži, ko je meni odprt.
@@ -40,7 +40,7 @@ Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](os
 ### Epic: Tenancy & Whitelabel (KAN-6)
 *(glej arhitekturno odločitev zgoraj — subdomene opuščene, model je zdaj SUPER_ADMIN/ADMIN/MEMBER z vabili)*
 - [x] Podatkovni model: `organizations` tabela + `users.organization_id`/`users.role` (SUPER_ADMIN/ADMIN/MEMBER) + `invite_token`
-- [x] SUPER_ADMIN ustvarja društva + prvega admina (`POST /api/superadmin/organizations`)
+- [x] SUPER_ADMIN ustvarja društva + prvega admina (`POST /api/superadmin/organizations`) in jih ureja/preimenuje inline (`PUT /api/superadmin/organizations/:id`)
 - [ ] Tenant isolation na work-log/reporting endpointih (work.js še ne filtrira po `organization_id`, samo po `user_id` — ni nujno narobe dokler ni skupinskih/admin pogledov čez več uporabnikov, a preveriti pri Fazi 2)
 - [ ] Public tenant branding endpoint (logo/barve društva)
 - [ ] Tenant settings admin UI (admin ureja logo/barve, member read-only)

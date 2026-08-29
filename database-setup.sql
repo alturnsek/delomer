@@ -47,6 +47,13 @@ CREATE TABLE IF NOT EXISTS organizations (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key VARCHAR(100) PRIMARY KEY,
+  setting_value VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES ('email_mode', 'log');
+
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NULL, -- društvo, kateremu uporabnik pripada

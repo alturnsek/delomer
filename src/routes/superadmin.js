@@ -1,7 +1,7 @@
 const express = require("express");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
-const { createInviteToken, logInviteEmail } = require("../utils/invites");
+const { createInviteToken, sendInviteEmail } = require("../utils/invites");
 
 const router = express.Router();
 
@@ -67,11 +67,73 @@ router.post("/organizations", async (req, res) => {
       [email, admin_first_name.trim(), admin_last_name.trim(), organizationId, token, expiresAt]
     );
 
-    logInviteEmail(email, token);
+    await sendInviteEmail(email, token);
 
     res.json({ message: "Društvo ustvarjeno, vabilo za admina poslano (glej strežniške loge za povezavo)" });
   } catch (err) {
     console.error("CREATE ORGANIZATION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  UREDI DRUŠTVO
+========================= */
+router.put("/organizations/:id", async (req, res) => {
+  try {
+    const name = (req.body.name || "").trim();
+
+    if (!name) {
+      return res.status(400).json({ message: "Vnesi ime društva" });
+    }
+
+    const result = await db.query(
+      "UPDATE organizations SET name = ? WHERE id = ?",
+      [name, req.params.id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Društvo ni najdeno" });
+    }
+
+    res.json({ message: "Društvo posodobljeno" });
+  } catch (err) {
+    console.error("UPDATE ORGANIZATION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  NASTAVITVE APLIKACIJE (npr. način pošiljanja emailov)
+========================= */
+router.get("/settings", async (req, res) => {
+  try {
+    const rows = await db.query("SELECT setting_key, setting_value FROM app_settings");
+    res.json(Object.fromEntries(rows.map(r => [r.setting_key, r.setting_value])));
+  } catch (err) {
+    console.error("GET SETTINGS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/settings/email-mode", async (req, res) => {
+  try {
+    const { email_mode } = req.body;
+
+    if (!["log", "real"].includes(email_mode)) {
+      return res.status(400).json({ message: "Neveljaven način" });
+    }
+
+    await db.query(
+      `INSERT INTO app_settings (setting_key, setting_value) VALUES ('email_mode', ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+      [email_mode]
+    );
+
+    res.json({ message: "Nastavitev posodobljena" });
+  } catch (err) {
+    console.error("UPDATE EMAIL MODE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

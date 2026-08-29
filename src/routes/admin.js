@@ -1,7 +1,7 @@
 const express = require("express");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
-const { createInviteToken, logInviteEmail } = require("../utils/invites");
+const { createInviteToken, sendInviteEmail } = require("../utils/invites");
 const { serializeRow, attachParticipants, resolveOrgParticipants, saveParticipants } = require("../utils/workLogs");
 
 const router = express.Router();
@@ -122,7 +122,7 @@ async function inviteOne(organizationId, entry) {
     [email, first_name, last_name, organizationId, token, expiresAt]
   );
 
-  logInviteEmail(email, token);
+  await sendInviteEmail(email, token);
 
   return { email, ok: true };
 }

@@ -4,6 +4,13 @@ CREATE TABLE IF NOT EXISTS organizations (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key VARCHAR(100) PRIMARY KEY,
+  setting_value VARCHAR(255) NOT NULL
+);
+
+INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES ('email_mode', 'log');
+
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NULL,
