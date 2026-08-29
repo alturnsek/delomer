@@ -493,6 +493,7 @@ let orgAdminsMembersCache = [];
 let currentOrgAdminsOrgId = null;
 
 async function loadOrgAdminsUsers(organizationId) {
+  if (currentOrgAdminsOrgId !== organizationId) bulkSelectedOrgAdminIds.clear();
   currentOrgAdminsOrgId = organizationId;
 
   const list = document.getElementById("orgAdminsList");
@@ -604,7 +605,121 @@ function renderOrgAdminsList() {
       loadOrgAdminsUsers(organizationId);
     });
   });
+
+  document.querySelectorAll(".deleteRoleManagedBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+
+      if (!confirm("Izbrišeš uporabnika? Če ima že vneseno delo, bo namesto izbrisa anonimiziran (ure ostanejo).")) return;
+
+      const res = await fetch(`${btn.dataset.orgEndpoint}/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Napaka pri izbrisu");
+        return;
+      }
+
+      bulkSelectedOrgAdminIds.delete(Number(id));
+      loadOrgAdminsUsers(organizationId);
+    });
+  });
+
+  document.querySelectorAll(".bulkSelectCheckbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const id = Number(cb.dataset.id);
+      if (cb.checked) bulkSelectedOrgAdminIds.add(id); else bulkSelectedOrgAdminIds.delete(id);
+    });
+  });
+
+  const selectAllBox = document.getElementById("orgAdminsSelectAll");
+  if (selectAllBox) selectAllBox.checked = false;
 }
+
+let bulkSelectedOrgAdminIds = new Set();
+
+document.getElementById("orgAdminsSelectAll")?.addEventListener("change", (e) => {
+  document.querySelectorAll(".bulkSelectCheckbox").forEach(cb => {
+    cb.checked = e.target.checked;
+    const id = Number(cb.dataset.id);
+    if (e.target.checked) bulkSelectedOrgAdminIds.add(id); else bulkSelectedOrgAdminIds.delete(id);
+  });
+});
+
+document.getElementById("orgAdminsBulkRoleBtn")?.addEventListener("click", async () => {
+  const role = document.getElementById("orgAdminsBulkRole").value;
+  const msg = document.getElementById("orgAdminsBulkMsg");
+  const ids = Array.from(bulkSelectedOrgAdminIds);
+
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!ids.length) {
+    msg.innerText = "Izberi vsaj enega člana";
+    return;
+  }
+
+  const res = await fetch(`/api/superadmin/organizations/${currentOrgAdminsOrgId}/users/bulk-role`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ user_ids: ids, role })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  const okCount = data.results.filter(r => r.ok).length;
+  msg.style.color = "#16a34a";
+  msg.innerText = `Vloga posodobljena za ${okCount}/${data.results.length}`;
+
+  bulkSelectedOrgAdminIds.clear();
+  loadOrgAdminsUsers(currentOrgAdminsOrgId);
+});
+
+document.getElementById("orgAdminsBulkDeleteBtn")?.addEventListener("click", async () => {
+  const msg = document.getElementById("orgAdminsBulkMsg");
+  const ids = Array.from(bulkSelectedOrgAdminIds);
+
+  msg.innerText = "";
+  msg.style.color = "";
+
+  if (!ids.length) {
+    msg.innerText = "Izberi vsaj enega člana";
+    return;
+  }
+
+  if (!confirm(`Izbrišeš ${ids.length} izbranih uporabnikov? Tisti z že vnesenim delom bodo namesto izbrisa anonimizirani.`)) return;
+
+  const res = await fetch(`/api/superadmin/organizations/${currentOrgAdminsOrgId}/users/bulk-delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ user_ids: ids })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.innerText = data.message || "Napaka";
+    return;
+  }
+
+  const okCount = data.results.filter(r => r.ok).length;
+  msg.style.color = "#16a34a";
+  msg.innerText = `Izbrisanih: ${okCount}/${data.results.length}`;
+
+  bulkSelectedOrgAdminIds.clear();
+  loadOrgAdminsUsers(currentOrgAdminsOrgId);
+});
 
 document.getElementById("orgAdminsSearch")?.addEventListener("input", renderOrgAdminsList);
 document.getElementById("orgAdminsStatusFilter")?.addEventListener("change", renderOrgAdminsList);
@@ -612,6 +727,17 @@ document.getElementById("orgAdminsRoleFilter")?.addEventListener("change", rende
 document.getElementById("orgAdminsSort")?.addEventListener("change", renderOrgAdminsList);
 
 function renderRoleManagedMember(m, roleEndpointBase) {
+  if (m.is_deleted) {
+    return `
+      <li class="member-item member-inactive" data-id="${m.id}">
+        <div class="member-row">
+          <span>Izbrisan uporabnik</span>
+          <span class="status-badge">${roleLabel(m.role)}</span>
+        </div>
+      </li>
+    `;
+  }
+
   const inactiveNote = m.is_active ? "" : " (deaktiviran)";
   const emailNote = m.email ? ` — ${m.email}` : " — brez emaila";
   const statusNote = m.activated ? "" : (m.email ? " (čaka aktivacijo)" : " (ni registriran)");
@@ -619,6 +745,7 @@ function renderRoleManagedMember(m, roleEndpointBase) {
   return `
     <li class="member-item${m.is_active ? "" : " member-inactive"}" data-id="${m.id}">
       <div class="member-row">
+        <input type="checkbox" class="bulkSelectCheckbox" data-id="${m.id}" ${bulkSelectedOrgAdminIds.has(m.id) ? "checked" : ""}>
         <span>${m.first_name} ${m.last_name}${emailNote}${statusNote}${inactiveNote}</span>
         <div class="actions">
           <select class="roleSelect" data-id="${m.id}" data-endpoint="${roleEndpointBase}">
@@ -647,6 +774,7 @@ function renderRoleManagedMember(m, roleEndpointBase) {
         <div class="edit-actions">
           <button class="saveRoleManagedBtn icon-btn btn-edit" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Shrani</button>
           ${(!m.activated && m.email) ? `<button class="resendInviteRoleManagedBtn icon-btn btn-edit" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Ponovno pošlji vabilo</button>` : ""}
+          <button class="deleteRoleManagedBtn icon-btn btn-reject" data-id="${m.id}" data-org-endpoint="${roleEndpointBase}">Izbriši</button>
           <button class="cancelRoleManagedEditBtn secondary-btn" data-id="${m.id}">Prekliči</button>
         </div>
       </div>

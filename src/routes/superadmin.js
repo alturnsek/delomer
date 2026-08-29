@@ -145,7 +145,7 @@ router.post("/settings/email-mode", async (req, res) => {
 router.get("/organizations/:id/users", async (req, res) => {
   try {
     const rows = await db.query(
-      `SELECT id, first_name, last_name, email, role, is_active,
+      `SELECT id, first_name, last_name, email, role, is_active, is_deleted,
               (password_hash != '') AS activated
        FROM users
        WHERE organization_id = ?
@@ -172,12 +172,16 @@ router.put("/organizations/:id/users/:userId", async (req, res) => {
     }
 
     const rows = await db.query(
-      "SELECT id, password_hash FROM users WHERE id = ? AND organization_id = ?",
+      "SELECT id, password_hash, is_deleted FROM users WHERE id = ? AND organization_id = ?",
       [req.params.userId, req.params.id]
     );
 
     if (!rows.length) {
       return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    if (rows[0].is_deleted) {
+      return res.status(400).json({ message: "Uporabnik je izbrisan" });
     }
 
     const cleanEmail = (email || "").trim().toLowerCase() || null;
@@ -255,7 +259,7 @@ router.post("/organizations/:id/users/:userId/role", async (req, res) => {
     }
 
     const result = await db.query(
-      "UPDATE users SET role = ? WHERE id = ? AND organization_id = ?",
+      "UPDATE users SET role = ? WHERE id = ? AND organization_id = ? AND is_deleted = 0",
       [role, req.params.userId, req.params.id]
     );
 
@@ -266,6 +270,121 @@ router.post("/organizations/:id/users/:userId/role", async (req, res) => {
     res.json({ message: "Vloga posodobljena" });
   } catch (err) {
     console.error("CHANGE ROLE (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  MNOŽIČNA SPREMEMBA VLOGE (SUPER_ADMIN)
+========================= */
+router.post("/organizations/:id/users/bulk-role", async (req, res) => {
+  try {
+    const { user_ids, role } = req.body;
+    const allowedRoles = ["ADMIN", "SUPERINTENDENT", "MEMBER", "PUBLIC"];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: "Neveljavna vloga" });
+    }
+
+    if (!Array.isArray(user_ids) || !user_ids.length) {
+      return res.status(400).json({ message: "Seznam uporabnikov je prazen" });
+    }
+
+    const results = [];
+
+    for (const userId of user_ids) {
+      const result = await db.query(
+        "UPDATE users SET role = ? WHERE id = ? AND organization_id = ? AND is_deleted = 0",
+        [role, userId, req.params.id]
+      );
+
+      results.push({
+        user_id: userId,
+        ok: !!result.affectedRows,
+        message: result.affectedRows ? undefined : "Uporabnik ni najden ali je izbrisan"
+      });
+    }
+
+    res.json({ results });
+  } catch (err) {
+    console.error("BULK CHANGE ROLE (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  IZBRIS ČLANA (SUPER_ADMIN) - hibridni pristop:
+  brez povezanega dela = pravi izbris; z delom = anonimizacija (ohrani ure/statistiko)
+========================= */
+async function deleteOrgUser(organizationId, userId) {
+  const rows = await db.query(
+    "SELECT id, is_deleted FROM users WHERE id = ? AND organization_id = ?",
+    [userId, organizationId]
+  );
+
+  const user = rows[0];
+
+  if (!user) {
+    return { user_id: userId, ok: false, message: "Uporabnik ni najden" };
+  }
+
+  if (user.is_deleted) {
+    return { user_id: userId, ok: true };
+  }
+
+  const workRows = await db.query("SELECT id FROM work_logs WHERE user_id = ? LIMIT 1", [userId]);
+  const participantRows = workRows.length
+    ? []
+    : await db.query("SELECT 1 FROM work_log_participants WHERE user_id = ? LIMIT 1", [userId]);
+
+  if (workRows.length || participantRows.length) {
+    await db.query(
+      `UPDATE users
+       SET first_name = 'Izbrisan', last_name = 'uporabnik', email = NULL, password_hash = '',
+           avatar_path = NULL, invite_token = NULL, invite_token_expires_at = NULL,
+           is_active = 0, is_deleted = 1
+       WHERE id = ?`,
+      [userId]
+    );
+  } else {
+    await db.query("DELETE FROM users WHERE id = ?", [userId]);
+  }
+
+  return { user_id: userId, ok: true };
+}
+
+router.delete("/organizations/:id/users/:userId", async (req, res) => {
+  try {
+    const result = await deleteOrgUser(req.params.id, req.params.userId);
+
+    if (!result.ok) {
+      return res.status(404).json({ message: result.message });
+    }
+
+    res.json({ message: "Uporabnik izbrisan" });
+  } catch (err) {
+    console.error("DELETE USER (SUPERADMIN) ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/organizations/:id/users/bulk-delete", async (req, res) => {
+  try {
+    const { user_ids } = req.body;
+
+    if (!Array.isArray(user_ids) || !user_ids.length) {
+      return res.status(400).json({ message: "Seznam uporabnikov je prazen" });
+    }
+
+    const results = [];
+
+    for (const userId of user_ids) {
+      results.push(await deleteOrgUser(req.params.id, userId));
+    }
+
+    res.json({ results });
+  } catch (err) {
+    console.error("BULK DELETE USERS (SUPERADMIN) ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

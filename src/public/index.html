@@ -561,6 +561,22 @@
           </select>
         </div>
 
+        <div class="participant-controls">
+          <label class="participant-row" style="flex:none;">
+            <input type="checkbox" id="orgAdminsSelectAll">
+            <span>Označi vse</span>
+          </label>
+          <select id="orgAdminsBulkRole">
+            <option value="MEMBER">Član</option>
+            <option value="SUPERINTENDENT">Nadzornik</option>
+            <option value="ADMIN">Administrator</option>
+            <option value="PUBLIC">Javni (kiosk)</option>
+          </select>
+          <button type="button" id="orgAdminsBulkRoleBtn" class="icon-btn btn-edit">Nastavi vlogo izbranim</button>
+          <button type="button" id="orgAdminsBulkDeleteBtn" class="icon-btn btn-reject">Izbriši izbrane</button>
+        </div>
+        <div id="orgAdminsBulkMsg" class="error"></div>
+
         <ul id="orgAdminsList"></ul>
       </section>
 
