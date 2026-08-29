@@ -426,9 +426,18 @@ function renderOrgMember(m) {
         </div>
       </div>
       <div class="member-edit-panel hidden" id="memberEdit-${m.id}">
-        <input class="editFirstName" value="${m.first_name}" placeholder="Ime">
-        <input class="editLastName" value="${m.last_name}" placeholder="Priimek">
-        <input class="editEmail" value="${m.email}" type="email" placeholder="Email">
+        <div class="field">
+          <label>Ime</label>
+          <input class="editFirstName" value="${m.first_name}">
+        </div>
+        <div class="field">
+          <label>Priimek</label>
+          <input class="editLastName" value="${m.last_name}">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input class="editEmail" value="${m.email}" type="email">
+        </div>
         <div id="editMemberMsg-${m.id}" class="error"></div>
         <div class="edit-actions">
           <button class="saveMemberBtn" data-id="${m.id}">Shrani</button>
