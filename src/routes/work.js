@@ -60,7 +60,7 @@ router.get('/organization-members', async (req, res) => {
 
     const rows = await pool.query(
       `SELECT id, first_name, last_name FROM users
-       WHERE organization_id = ? AND id != ? AND is_active = 1
+       WHERE organization_id = ? AND id != ? AND is_active = 1 AND role != 'PUBLIC'
        ORDER BY first_name ASC, last_name ASC`,
       [req.user.organization_id, req.user.id]
     );
@@ -151,7 +151,10 @@ router.post('/', async (req, res) => {
     const workLogId = insertResult.insertId;
 
     const participantsMap = await resolveOrgParticipants(conn, req.user.organization_id, participants);
-    if (!participantsMap.has(req.user.id)) participantsMap.set(req.user.id, null);
+    // javni (kiosk) račun ni oseba, ki opravlja delo - se sam ne doda kot sodelavec
+    if (req.user.role !== "PUBLIC" && !participantsMap.has(req.user.id)) {
+      participantsMap.set(req.user.id, null);
+    }
 
     await saveParticipants(conn, workLogId, participantsMap);
 
@@ -277,7 +280,9 @@ router.put('/:id', async (req, res) => {
       await conn.query("DELETE FROM work_log_participants WHERE work_log_id = ?", [req.params.id]);
 
       const participantsMap = await resolveOrgParticipants(conn, req.user.organization_id, participants);
-      if (!participantsMap.has(req.user.id)) participantsMap.set(req.user.id, null);
+      if (req.user.role !== "PUBLIC" && !participantsMap.has(req.user.id)) {
+        participantsMap.set(req.user.id, null);
+      }
 
       await saveParticipants(conn, req.params.id, participantsMap);
     }

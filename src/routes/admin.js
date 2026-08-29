@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const db = require("../config/db");
 const { requireRole } = require("../middleware/roles");
 const { createInviteToken, sendInviteEmail, issueAndSendInvite } = require("../utils/invites");
@@ -102,10 +103,13 @@ router.get("/users/:id/stats", async (req, res) => {
   }
 });
 
+const INVITABLE_ROLES = ["MEMBER", "PUBLIC"];
+
 async function inviteOne(organizationId, entry) {
   const email = (entry.email || "").trim().toLowerCase();
   const first_name = (entry.first_name || "").trim();
   const last_name = (entry.last_name || "").trim();
+  const role = INVITABLE_ROLES.includes(entry.role) ? entry.role : "MEMBER";
 
   if (!email || !first_name || !last_name) {
     return { email: entry.email || "", ok: false, message: "Manjkajo podatki" };
@@ -121,8 +125,8 @@ async function inviteOne(organizationId, entry) {
 
   await db.query(
     `INSERT INTO users (email, first_name, last_name, organization_id, role, invite_token, invite_token_expires_at)
-     VALUES (?, ?, ?, ?, 'MEMBER', ?, ?)`,
-    [email, first_name, last_name, organizationId, token, expiresAt]
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [email, first_name, last_name, organizationId, role, token, expiresAt]
   );
 
   await sendInviteEmail(email, token);
@@ -144,6 +148,46 @@ router.post("/users", canManageUsers, async (req, res) => {
     res.json({ message: "Vabilo poslano (glej strežniške loge za povezavo)" });
   } catch (err) {
     console.error("INVITE USER ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  DODAJ ČLANE BREZ EMAILA (samo za seznam - izbira med sodelavci pri vnosu dela)
+  Ne pošlje vabila - član se lahko kasneje sam registrira preko registracijske
+  povezave društva, ali pa mu admin naknadno doda email in pošlje vabilo.
+========================= */
+router.post("/users/roster", canManageUsers, async (req, res) => {
+  try {
+    const { entries } = req.body;
+
+    if (!Array.isArray(entries) || !entries.length) {
+      return res.status(400).json({ message: "Seznam članov je prazen" });
+    }
+
+    const results = [];
+
+    for (const entry of entries) {
+      const first_name = (entry.first_name || "").trim();
+      const last_name = (entry.last_name || "").trim();
+
+      if (!first_name || !last_name) {
+        results.push({ first_name, last_name, ok: false, message: "Manjka ime ali priimek" });
+        continue;
+      }
+
+      await db.query(
+        `INSERT INTO users (first_name, last_name, organization_id, role, email, password_hash)
+         VALUES (?, ?, ?, 'MEMBER', NULL, '')`,
+        [first_name, last_name, req.user.organization_id]
+      );
+
+      results.push({ first_name, last_name, ok: true });
+    }
+
+    res.json({ results });
+  } catch (err) {
+    console.error("ADD ROSTER MEMBERS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -179,14 +223,12 @@ router.put("/users/:id", canManageUsers, async (req, res) => {
   try {
     const { first_name, last_name, email } = req.body;
 
-    if (!first_name || !last_name || !email) {
+    if (!first_name || !last_name) {
       return res.status(400).json({ message: "Manjkajo podatki" });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-
     const rows = await db.query(
-      "SELECT id FROM users WHERE id = ? AND organization_id = ?",
+      "SELECT id, password_hash FROM users WHERE id = ? AND organization_id = ?",
       [req.params.id, req.user.organization_id]
     );
 
@@ -194,13 +236,22 @@ router.put("/users/:id", canManageUsers, async (req, res) => {
       return res.status(404).json({ message: "Uporabnik ni najden" });
     }
 
-    const emailTaken = await db.query(
-      "SELECT id FROM users WHERE email = ? AND id != ?",
-      [cleanEmail, req.params.id]
-    );
+    const cleanEmail = (email || "").trim().toLowerCase() || null;
 
-    if (emailTaken.length) {
-      return res.status(400).json({ message: "Email je že uporabljen" });
+    // član z aktivnim računom (že nastavljeno geslo) mora obdržati email - to je njegov login
+    if (!cleanEmail && rows[0].password_hash) {
+      return res.status(400).json({ message: "Email je obvezen za aktiviran račun" });
+    }
+
+    if (cleanEmail) {
+      const emailTaken = await db.query(
+        "SELECT id FROM users WHERE email = ? AND id != ?",
+        [cleanEmail, req.params.id]
+      );
+
+      if (emailTaken.length) {
+        return res.status(400).json({ message: "Email je že uporabljen" });
+      }
     }
 
     await db.query(
@@ -235,6 +286,10 @@ router.post("/users/:id/resend-invite", canManageUsers, async (req, res) => {
       return res.status(400).json({ message: "Uporabnik je že aktiviral račun" });
     }
 
+    if (!user.email) {
+      return res.status(400).json({ message: "Član nima nastavljenega emaila" });
+    }
+
     await issueAndSendInvite(user.id, user.email);
 
     res.json({ message: "Vabilo ponovno poslano (glej strežniške loge za povezavo)" });
@@ -250,7 +305,7 @@ router.post("/users/:id/resend-invite", canManageUsers, async (req, res) => {
 router.post("/users/:id/role", canManageUsers, async (req, res) => {
   try {
     const { role } = req.body;
-    const allowedRoles = ["ADMIN", "SUPERINTENDENT", "MEMBER"];
+    const allowedRoles = ["ADMIN", "SUPERINTENDENT", "MEMBER", "PUBLIC"];
 
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: "Neveljavna vloga" });
@@ -467,7 +522,7 @@ async function setTeamMembers(organizationId, teamId, memberIds) {
   const placeholders = numericIds.map(() => "?").join(",");
 
   const validRows = await db.query(
-    `SELECT id FROM users WHERE id IN (${placeholders}) AND organization_id = ?`,
+    `SELECT id FROM users WHERE id IN (${placeholders}) AND organization_id = ? AND role != 'PUBLIC'`,
     [...numericIds, organizationId]
   );
 
@@ -584,7 +639,10 @@ router.put("/work/:id", async (req, res) => {
     const { task, started_at, ended_at, category_id, participants } = req.body;
 
     const rows = await db.query(
-      "SELECT id, user_id FROM work_logs WHERE id = ? AND organization_id = ?",
+      `SELECT work_logs.id, work_logs.user_id, users.role AS creator_role
+       FROM work_logs
+       JOIN users ON users.id = work_logs.user_id
+       WHERE work_logs.id = ? AND work_logs.organization_id = ?`,
       [req.params.id, req.user.organization_id]
     );
 
@@ -604,7 +662,10 @@ router.put("/work/:id", async (req, res) => {
       await db.query("DELETE FROM work_log_participants WHERE work_log_id = ?", [req.params.id]);
 
       const participantsMap = await resolveOrgParticipants(db, req.user.organization_id, participants);
-      if (!participantsMap.has(workLog.user_id)) participantsMap.set(workLog.user_id, null);
+      // ustvarjatelj se prisilno doda kot sodelavec, razen če je vnos ustvaril javni (kiosk) račun
+      if (workLog.creator_role !== "PUBLIC" && !participantsMap.has(workLog.user_id)) {
+        participantsMap.set(workLog.user_id, null);
+      }
 
       await saveParticipants(db, req.params.id, participantsMap);
     }
@@ -746,7 +807,8 @@ router.get("/stats", async (req, res) => {
 router.get("/organization", canManageUsers, async (req, res) => {
   try {
     const rows = await db.query(
-      `SELECT id, name, description, logo_path, hour_rounding_minutes, hour_display_format
+      `SELECT id, name, description, logo_path, hour_rounding_minutes, hour_display_format,
+              join_code, registration_enabled
        FROM organizations WHERE id = ?`,
       [req.user.organization_id]
     );
@@ -771,6 +833,7 @@ router.put("/organization", canManageUsers, async (req, res) => {
     const hourDisplayFormat = allowedFormats.includes(req.body.hour_display_format)
       ? req.body.hour_display_format
       : "DECIMAL";
+    const registrationEnabled = req.body.registration_enabled ? 1 : 0;
 
     if (!name) {
       return res.status(400).json({ message: "Vnesi ime društva" });
@@ -778,14 +841,34 @@ router.put("/organization", canManageUsers, async (req, res) => {
 
     await db.query(
       `UPDATE organizations
-       SET name = ?, description = ?, hour_rounding_minutes = ?, hour_display_format = ?
+       SET name = ?, description = ?, hour_rounding_minutes = ?, hour_display_format = ?, registration_enabled = ?
        WHERE id = ?`,
-      [name, description || null, hourRoundingMinutes, hourDisplayFormat, req.user.organization_id]
+      [name, description || null, hourRoundingMinutes, hourDisplayFormat, registrationEnabled, req.user.organization_id]
     );
 
     res.json({ message: "Društvo posodobljeno" });
   } catch (err) {
     console.error("UPDATE ORGANIZATION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  REGENERIRAJ REGISTRACIJSKO KODO DRUŠTVA
+  (npr. če je koda "uhajala" javnosti in registracijo poznajo tudi tisti, ki ne bi smeli)
+========================= */
+router.post("/organization/join-code/regenerate", canManageUsers, async (req, res) => {
+  try {
+    const code = crypto.randomBytes(6).toString("hex");
+
+    await db.query(
+      "UPDATE organizations SET join_code = ? WHERE id = ?",
+      [code, req.user.organization_id]
+    );
+
+    res.json({ message: "Registracijska koda posodobljena", join_code: code });
+  } catch (err) {
+    console.error("REGENERATE JOIN CODE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -201,7 +201,8 @@ code {
   cursor: pointer;
 }
 
-.checkbox-list input[type="checkbox"] {
+.checkbox-list input[type="checkbox"],
+.checkbox-list input[type="radio"] {
   width: auto;
   margin: 0;
 }

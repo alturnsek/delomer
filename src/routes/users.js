@@ -6,7 +6,7 @@ const db = require("../config/db");
 const passport = require("passport");
 const { requireAuth } = require("../middleware/roles");
 const { uploadAvatar } = require("../middleware/upload");
-const { createInviteToken, sendPasswordChangedEmail } = require("../utils/invites");
+const { createInviteToken, sendPasswordChangedEmail, sendAccountClaimedEmail } = require("../utils/invites");
 const { recordLogin } = require("../utils/loginHistory");
 
 const router = express.Router();
@@ -143,6 +143,122 @@ router.post("/invite/:token/activate", async (req, res) => {
     });
   } catch (err) {
     console.error("ACTIVATE INVITE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  SAMOPOSTREŽNA REGISTRACIJA - registracijska povezava društva
+  (član brez emaila, ki ga je admin dodal vnaprej na seznam, si sam poišče
+  svoje ime in nastavi email + geslo - brez ročnega vabila za vsakega posebej)
+========================= */
+router.get("/join/:code", async (req, res) => {
+  try {
+    const orgRows = await db.query(
+      "SELECT id, name, registration_enabled FROM organizations WHERE join_code = ?",
+      [req.params.code]
+    );
+
+    const org = orgRows[0];
+
+    if (!org) {
+      return res.status(404).json({ message: "Registracijska povezava ne obstaja" });
+    }
+
+    if (!org.registration_enabled) {
+      return res.status(400).json({ message: "Registracija za to društvo trenutno ni omogočena" });
+    }
+
+    const members = await db.query(
+      `SELECT id, first_name, last_name FROM users
+       WHERE organization_id = ? AND email IS NULL AND password_hash = '' AND is_active = 1
+       ORDER BY first_name ASC, last_name ASC`,
+      [org.id]
+    );
+
+    res.json({ organization_name: org.name, members });
+  } catch (err) {
+    console.error("GET JOIN CODE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/join/:code/claim", async (req, res) => {
+  try {
+    const { member_id, email, password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: "Geslo mora imeti vsaj 6 znakov" });
+    }
+
+    const cleanEmail = (email || "").trim().toLowerCase();
+
+    if (!cleanEmail) {
+      return res.status(400).json({ message: "Vnesi email" });
+    }
+
+    const orgRows = await db.query(
+      "SELECT id, name, registration_enabled FROM organizations WHERE join_code = ?",
+      [req.params.code]
+    );
+
+    const org = orgRows[0];
+
+    if (!org || !org.registration_enabled) {
+      return res.status(400).json({ message: "Registracija ni na voljo" });
+    }
+
+    const memberRows = await db.query(
+      `SELECT users.*, organizations.name AS organization_name
+       FROM users
+       LEFT JOIN organizations ON organizations.id = users.organization_id
+       WHERE users.id = ? AND users.organization_id = ? AND users.email IS NULL AND users.password_hash = ''`,
+      [member_id, org.id]
+    );
+
+    const member = memberRows[0];
+
+    if (!member) {
+      return res.status(404).json({ message: "Član ni najden ali je že registriran" });
+    }
+
+    const emailTaken = await db.query("SELECT id FROM users WHERE email = ?", [cleanEmail]);
+
+    if (emailTaken.length) {
+      return res.status(400).json({ message: "Email je že uporabljen" });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+
+    await db.query(
+      "UPDATE users SET email = ?, password_hash = ? WHERE id = ?",
+      [cleanEmail, password_hash, member.id]
+    );
+
+    member.email = cleanEmail;
+    member.password_hash = password_hash;
+
+    await sendAccountClaimedEmail(cleanEmail, org.name);
+
+    req.login(member, (err) => {
+      if (err) {
+        console.error("LOGIN ERROR:", err);
+        return res.status(500).json({ message: "Login error" });
+      }
+
+      req.session.save(async (err) => {
+        if (err) {
+          console.error("SESSION SAVE ERROR:", err);
+          return res.status(500).json({ message: "Session save error" });
+        }
+
+        await recordLogin(req, member.id);
+        res.json({ message: "Račun ustvarjen", user: toPublicUser(member) });
+      });
+    });
+  } catch (err) {
+    console.error("CLAIM JOIN ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8">
+  <title>Registracija — Delomer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="main-header">
+  <div class="logo">
+    <a href="/"><img class="logo" src="logo.png" alt="Delomer" title="Delomer logo"></a>
+  </div>
+</header>
+
+<main class="main-content">
+<div class="container">
+
+  <div id="join-box" class="box active">
+    <h2>Registracija</h2>
+
+    <p id="joinInfo">Preverjam registracijsko povezavo...</p>
+
+    <div id="joinForm" class="hidden">
+      <div class="field">
+        <label>Poišči svoje ime</label>
+        <input id="joinSearch" placeholder="Išči po imenu ali priimku...">
+      </div>
+
+      <div id="joinMemberList" class="checkbox-list"></div>
+
+      <div class="field">
+        <label>Email</label>
+        <input id="joinEmail" type="email" placeholder="Tvoj email">
+      </div>
+
+      <div class="field">
+        <label>Geslo</label>
+        <input id="joinPassword" type="password" placeholder="Novo geslo">
+      </div>
+
+      <div id="joinError" class="error"></div>
+
+      <button id="joinSubmitBtn">Ustvari račun</button>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<footer class="main-footer">
+  <p>© 2026 Delomer</p>
+</footer>
+
+<script src="join.js"></script>
+</body>
+</html>
