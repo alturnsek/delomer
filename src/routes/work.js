@@ -10,6 +10,28 @@ router.use(requireAuth);
 
 
 /* =========================
+  NASTAVITVE PRIKAZA/OBRAČUNAVANJA UR (za vse člane društva)
+========================= */
+router.get('/organization-settings', async (req, res) => {
+  try {
+    if (!req.user.organization_id) {
+      return res.json({ hour_rounding_minutes: 1, hour_display_format: 'DECIMAL' });
+    }
+
+    const rows = await pool.query(
+      "SELECT hour_rounding_minutes, hour_display_format FROM organizations WHERE id = ?",
+      [req.user.organization_id]
+    );
+
+    res.json(rows[0] ? serializeRow(rows[0]) : { hour_rounding_minutes: 1, hour_display_format: 'DECIMAL' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+/* =========================
   KATEGORIJE (za dropdown ob vnosu dela - samo aktivne)
 ========================= */
 router.get('/categories', async (req, res) => {

@@ -746,7 +746,8 @@ router.get("/stats", async (req, res) => {
 router.get("/organization", canManageUsers, async (req, res) => {
   try {
     const rows = await db.query(
-      "SELECT id, name, description, logo_path FROM organizations WHERE id = ?",
+      `SELECT id, name, description, logo_path, hour_rounding_minutes, hour_display_format
+       FROM organizations WHERE id = ?`,
       [req.user.organization_id]
     );
 
@@ -754,7 +755,7 @@ router.get("/organization", canManageUsers, async (req, res) => {
       return res.status(404).json({ message: "Društvo ni najdeno" });
     }
 
-    res.json(rows[0]);
+    res.json(serializeRow(rows[0]));
   } catch (err) {
     console.error("GET ORGANIZATION ERROR:", err);
     res.status(500).json({ message: "Server error" });
@@ -765,14 +766,21 @@ router.put("/organization", canManageUsers, async (req, res) => {
   try {
     const name = (req.body.name || "").trim();
     const description = (req.body.description || "").trim();
+    const hourRoundingMinutes = Number(req.body.hour_rounding_minutes) || 1;
+    const allowedFormats = ["DECIMAL", "WHOLE", "DHM"];
+    const hourDisplayFormat = allowedFormats.includes(req.body.hour_display_format)
+      ? req.body.hour_display_format
+      : "DECIMAL";
 
     if (!name) {
       return res.status(400).json({ message: "Vnesi ime društva" });
     }
 
     await db.query(
-      "UPDATE organizations SET name = ?, description = ? WHERE id = ?",
-      [name, description || null, req.user.organization_id]
+      `UPDATE organizations
+       SET name = ?, description = ?, hour_rounding_minutes = ?, hour_display_format = ?
+       WHERE id = ?`,
+      [name, description || null, hourRoundingMinutes, hourDisplayFormat, req.user.organization_id]
     );
 
     res.json({ message: "Društvo posodobljeno" });

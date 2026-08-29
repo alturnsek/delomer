@@ -60,6 +60,49 @@ function memberCountLabel(n) {
 }
 
 /* =========================
+  NAČIN OBRAČUNAVANJA/PRIKAZA UR (nastavitev na nivoju društva)
+========================= */
+let orgHourSettings = { hour_rounding_minutes: 1, hour_display_format: "DECIMAL" };
+
+async function loadOrgHourSettings() {
+  try {
+    const res = await fetch("/api/work/organization-settings", { credentials: "include" });
+    if (res.ok) orgHourSettings = await res.json();
+  } catch (err) {
+    console.error("LOAD ORG HOUR SETTINGS ERROR:", err);
+  }
+}
+
+function roundMinutes(minutes) {
+  const step = orgHourSettings.hour_rounding_minutes || 1;
+  return Math.round(minutes / step) * step;
+}
+
+// vrne besedilo ur glede na nastavitev društva (zaokroževanje + format prikaza)
+function formatHours(minutes) {
+  const rounded = roundMinutes(minutes);
+
+  if (orgHourSettings.hour_display_format === "WHOLE") {
+    return `${Math.round(rounded / 60)} h`;
+  }
+
+  if (orgHourSettings.hour_display_format === "DHM") {
+    const days = Math.floor(rounded / (60 * 24));
+    const hours = Math.floor((rounded % (60 * 24)) / 60);
+    const mins = rounded % 60;
+
+    const parts = [];
+    if (days) parts.push(`${days}d`);
+    if (days || hours) parts.push(`${hours}h`);
+    parts.push(`${mins}min`);
+
+    return parts.join(" ");
+  }
+
+  return `${(rounded / 60).toFixed(1)} h`;
+}
+
+/* =========================
   VIEW ROUTING (sidebar meni)
 ========================= */
 const VIEW_LOADERS = {
@@ -158,6 +201,8 @@ async function checkAuth() {
 
       currentUserId = data.user.id;
       currentUserRole = data.user.role;
+
+      if (currentUserRole !== "SUPER_ADMIN") loadOrgHourSettings();
 
       applySidebarState();
 
@@ -1246,6 +1291,8 @@ async function loadOrgSettingsView() {
     document.getElementById("orgSettingsName").value = org.name || "";
     document.getElementById("orgSettingsDescription").value = org.description || "";
     document.getElementById("orgLogoImg").src = org.logo_path || "logo.png";
+    document.getElementById("orgHourRounding").value = org.hour_rounding_minutes || 1;
+    document.getElementById("orgHourDisplayFormat").value = org.hour_display_format || "DECIMAL";
   }
 
   loadOfficials();
@@ -1254,6 +1301,8 @@ async function loadOrgSettingsView() {
 document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async () => {
   const name = document.getElementById("orgSettingsName").value.trim();
   const description = document.getElementById("orgSettingsDescription").value.trim();
+  const hour_rounding_minutes = Number(document.getElementById("orgHourRounding").value) || 1;
+  const hour_display_format = document.getElementById("orgHourDisplayFormat").value;
   const msg = document.getElementById("orgSettingsMsg");
 
   msg.innerText = "";
@@ -1268,7 +1317,7 @@ document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async (
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ name, description })
+    body: JSON.stringify({ name, description, hour_rounding_minutes, hour_display_format })
   });
 
   const data = await res.json();
@@ -1280,6 +1329,8 @@ document.getElementById("saveOrgSettingsBtn")?.addEventListener("click", async (
 
   msg.style.color = "#16a34a";
   msg.innerText = data.message;
+
+  loadOrgHourSettings();
 });
 
 document.getElementById("orgLogoInput")?.addEventListener("change", async (e) => {
@@ -1697,7 +1748,7 @@ document.getElementById("approvalsStatusFilter")?.addEventListener("change", ren
 
 function formatParticipant(p, defaultMinutes) {
   const minutes = p.minutes_override === null || p.minutes_override === undefined ? defaultMinutes : p.minutes_override;
-  return `${p.first_name} ${p.last_name} (${(minutes / 60).toFixed(2)} h)`;
+  return `${p.first_name} ${p.last_name} (${formatHours(minutes)})`;
 }
 
 function formatDateDisplay(dateStr) {
@@ -1707,7 +1758,7 @@ function formatDateDisplay(dateStr) {
 }
 
 function renderAdminWorkItem(w) {
-  const hours = (w.minutes / 60).toFixed(2);
+  const hours = formatHours(w.minutes);
   const participants = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
   const correctedBadge = (w.status === "PENDING" && w.rejection_reason)
     ? `<span class="status-badge status-CORRECTED">popravljeno po zavrnitvi</span>`
@@ -1719,7 +1770,7 @@ function renderAdminWorkItem(w) {
         <span>
           <strong>${formatDateDisplay(w.started_at)}</strong> · <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
           <span class="status-badge status-${w.status}">${statusLabel(w.status)}</span>${correctedBadge}<br>
-          <small>${w.category_name || "brez kategorije"} · ${hours} h · sodelavci: ${participants || "-"}</small>
+          <small>${w.category_name || "brez kategorije"} · ${hours} · sodelavci: ${participants || "-"}</small>
           ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog: ${w.rejection_reason}</small>` : ""}
         </span>
         <div class="actions">
@@ -1767,7 +1818,7 @@ async function loadWork() {
   }
 
   data.forEach(w => {
-    const hours = (w.minutes / 60).toFixed(2);
+    const hours = formatHours(w.minutes);
     const participantNames = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
     const isOwner = w.user_id === currentUserId;
     const isLocked = w.status === "APPROVED";
@@ -1785,7 +1836,7 @@ async function loadWork() {
         ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog zavrnitve: ${w.rejection_reason}</small>` : ""}
       </span>
       <div class="actions">
-        <strong>${hours} h</strong>
+        <strong>${hours}</strong>
         ${isOwner && !isLocked ? `
           <button class="editBtn icon-btn" data-id="${w.id}">✏️</button>
           <button class="deleteBtn" data-id="${w.id}">❌</button>
@@ -2068,7 +2119,7 @@ async function loadOrgStats() {
 
   const data = await res.json();
 
-  document.getElementById("orgStatsTotalHours").innerText = (data.totalMinutes / 60).toFixed(1);
+  document.getElementById("orgStatsTotalHours").innerText = formatHours(data.totalMinutes);
 
   renderHoursChart("orgStatsChart", data.byDate, from, to);
 
@@ -2077,7 +2128,7 @@ async function loadOrgStats() {
 
   const list = document.getElementById("orgStatsByUserList");
   list.innerHTML = byUserTop.length
-    ? byUserTop.map(u => `<li><span>${u.first_name} ${u.last_name}</span><span>${(u.minutes / 60).toFixed(2)} h</span></li>`).join("")
+    ? byUserTop.map(u => `<li><span>${u.first_name} ${u.last_name}</span><span>${formatHours(u.minutes)}</span></li>`).join("")
     : "<li>Ni podatkov za izbrano obdobje/filtre</li>";
 }
 
@@ -2184,13 +2235,13 @@ async function loadPlatformStats() {
 
   const data = await res.json();
 
-  document.getElementById("platformStatsTotalHours").innerText = (data.totalMinutes / 60).toFixed(1);
+  document.getElementById("platformStatsTotalHours").innerText = formatHours(data.totalMinutes);
 
   renderHoursChart("platformStatsChart", data.byDate, from, to);
 
   const list = document.getElementById("platformStatsByOrgList");
   list.innerHTML = data.byOrganization.length
-    ? data.byOrganization.map(o => `<li><span>${o.name}</span><span>${(o.minutes / 60).toFixed(2)} h</span></li>`).join("")
+    ? data.byOrganization.map(o => `<li><span>${o.name}</span><span>${formatHours(o.minutes)}</span></li>`).join("")
     : "<li>Ni podatkov za izbrano obdobje/filtre</li>";
 }
 

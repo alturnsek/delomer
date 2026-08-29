@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS organizations (
   name VARCHAR(255) NOT NULL,
   logo_path VARCHAR(255) NULL,
   description TEXT NULL,
+  hour_rounding_minutes INT NOT NULL DEFAULT 1,
+  hour_display_format ENUM('DECIMAL','WHOLE','DHM') NOT NULL DEFAULT 'DECIMAL',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

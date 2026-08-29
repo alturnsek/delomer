@@ -273,47 +273,95 @@
       <section id="view-org-settings" class="view hidden">
         <h2>Nastavitve društva</h2>
 
-        <div class="profile-card">
-          <div class="profile-avatar-wrap">
-            <img id="orgLogoImg" src="logo.png" alt="Logotip društva" class="profile-avatar">
-            <label class="icon-btn btn-edit avatar-upload-label">
-              Spremeni logotip
-              <input type="file" id="orgLogoInput" accept="image/*" class="hidden-file-input">
-            </label>
-            <div id="orgLogoMsg" class="error"></div>
+        <div class="subtabs">
+          <button type="button" class="subtab-btn active" data-subtab="general">Splošno</button>
+          <button type="button" class="subtab-btn" data-subtab="officials">Funkcionarji</button>
+        </div>
+
+        <div class="subtab-panel" data-subtab-panel="general">
+          <div class="profile-card">
+            <div class="profile-avatar-wrap">
+              <img id="orgLogoImg" src="logo.png" alt="Logotip društva" class="profile-avatar">
+              <label class="icon-btn btn-edit avatar-upload-label">
+                Spremeni logotip
+                <input type="file" id="orgLogoInput" accept="image/*" class="hidden-file-input">
+              </label>
+              <div id="orgLogoMsg" class="error"></div>
+            </div>
+
+            <div class="profile-info">
+              <div class="field">
+                <label>Ime društva</label>
+                <input id="orgSettingsName">
+              </div>
+              <div class="field">
+                <label>Opis</label>
+                <textarea id="orgSettingsDescription" rows="4"></textarea>
+              </div>
+            </div>
           </div>
 
-          <div class="profile-info">
+          <div class="work-form">
+            <label>Način obračunavanja/prikaza ur</label>
+
             <div class="field">
-              <label>Ime društva</label>
-              <input id="orgSettingsName">
+              <label>Zaokroži ure na (minute)</label>
+              <input type="number" id="orgHourRounding" min="1" value="1">
             </div>
+
             <div class="field">
-              <label>Opis</label>
-              <textarea id="orgSettingsDescription" rows="4"></textarea>
+              <label>Prikaz ur</label>
+              <select id="orgHourDisplayFormat">
+                <option value="DECIMAL">Ure z decimalnim mestom (npr. 8.5 h)</option>
+                <option value="WHOLE">Cele ure (npr. 8 h)</option>
+                <option value="DHM">Dnevi, ure, minute (npr. 1d 2h 30min)</option>
+              </select>
             </div>
+
             <div id="orgSettingsMsg" class="error"></div>
             <button id="saveOrgSettingsBtn" class="icon-btn btn-edit">Shrani</button>
           </div>
+
+          <div class="work-form">
+            <label>Ostale nastavitve (kmalu)</label>
+
+            <label class="toggle-row">
+              <span class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></span>
+              Placeholder nastavitev 1 (kmalu)
+            </label>
+
+            <label class="toggle-row">
+              <span class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></span>
+              Placeholder nastavitev 2 (kmalu)
+            </label>
+
+            <div class="field">
+              <label>Placeholder izbira (kmalu)</label>
+              <select disabled>
+                <option>Možnost A</option>
+                <option>Možnost B</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        <h2>Funkcionarji</h2>
+        <div class="subtab-panel hidden" data-subtab-panel="officials">
+          <div class="work-form">
+            <input id="officialFirstName" placeholder="Ime">
+            <input id="officialLastName" placeholder="Priimek">
+            <input id="officialTitle" placeholder="Funkcija (npr. Predsednik)">
+            <input id="officialPhone" placeholder="Telefon (neobvezno)">
+            <input id="officialEmail" type="email" placeholder="Email (neobvezno)">
+            <input id="officialWhatsapp" placeholder="WhatsApp (neobvezno)">
+            <input id="officialViber" placeholder="Viber (neobvezno)">
+            <input id="officialTelegram" placeholder="Telegram (neobvezno)">
+            <button id="saveOfficialBtn">Dodaj funkcionarja</button>
+            <button id="cancelOfficialEditBtn" class="hidden secondary-btn">Prekliči urejanje</button>
+            <div id="officialMsg" class="error"></div>
+          </div>
 
-        <div class="work-form">
-          <input id="officialFirstName" placeholder="Ime">
-          <input id="officialLastName" placeholder="Priimek">
-          <input id="officialTitle" placeholder="Funkcija (npr. Predsednik)">
-          <input id="officialPhone" placeholder="Telefon (neobvezno)">
-          <input id="officialEmail" type="email" placeholder="Email (neobvezno)">
-          <input id="officialWhatsapp" placeholder="WhatsApp (neobvezno)">
-          <input id="officialViber" placeholder="Viber (neobvezno)">
-          <input id="officialTelegram" placeholder="Telegram (neobvezno)">
-          <button id="saveOfficialBtn">Dodaj funkcionarja</button>
-          <button id="cancelOfficialEditBtn" class="hidden secondary-btn">Prekliči urejanje</button>
-          <div id="officialMsg" class="error"></div>
+          <ul id="officialsList"></ul>
         </div>
-
-        <ul id="officialsList"></ul>
       </section>
 
       <!-- POTRJEVANJE DELA -->
