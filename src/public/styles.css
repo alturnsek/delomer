@@ -301,6 +301,10 @@ code {
   margin-top: 0;
 }
 
+button svg {
+  vertical-align: middle;
+}
+
 .btn-edit { background: #3b82f6; }
 .btn-edit:hover { background: #2563eb; }
 
@@ -969,34 +973,8 @@ body:not(.loading) #loader {
   white-space: nowrap;
 }
 
-.editBtn {
-  width: auto;
-  padding: 6px 12px;
-  font-size: 16px;
-  border-radius: 8px;
-  margin-top: 0;
-  background: #3b82f6;
-}
+/* .editBtn/.deleteBtn zdaj uporabljata skupni .icon-btn/.btn-edit/.btn-reject barvni sistem (glej zgoraj) */
 
-.editBtn:hover {
-  background: #2563eb;
-}
-/* =========================
-  DELETE BTN
-========================= */
-
-.deleteBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  color: #ef4444;
-}
-
-.deleteBtn:hover {
-  background-color: white;
-  transform: scale(1.5);
-}
 /* =========================
   POPUP
 ========================= */
