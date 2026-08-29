@@ -1757,6 +1757,12 @@ function formatDateDisplay(dateStr) {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
+function formatDateTimeDisplay(dateStr) {
+  const d = new Date(dateStr);
+  const pad = n => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function renderAdminWorkItem(w) {
   const hours = formatHours(w.minutes);
   const participants = w.participants.map(p => formatParticipant(p, w.minutes)).join(", ");
@@ -2318,6 +2324,26 @@ async function loadProfileView() {
   }
 
   loadProfileStats();
+  loadLoginHistory();
+}
+
+async function loadLoginHistory() {
+  const list = document.getElementById("loginHistoryList");
+  if (!list) return;
+
+  const res = await fetch("/api/users/me/login-history", { credentials: "include" });
+  if (!res.ok) return;
+
+  const rows = await res.json();
+
+  list.innerHTML = rows.length
+    ? rows.map(r => `
+        <li>
+          <span>${formatDateTimeDisplay(r.created_at)} — ${r.ip_address || "neznan IP"}${r.location ? " · " + r.location : ""}</span>
+          <span>${r.browser || "-"}</span>
+        </li>
+      `).join("")
+    : "<li>Ni zabeleženih prijav</li>";
 }
 
 async function loadProfileStats() {
@@ -2400,12 +2426,9 @@ document.getElementById("savePasswordBtn")?.addEventListener("click", async () =
     return;
   }
 
-  msg.style.color = "#16a34a";
-  msg.innerText = data.message;
-
-  document.getElementById("oldPasswordInput").value = "";
-  document.getElementById("newPasswordInput").value = "";
-  document.getElementById("confirmPasswordInput").value = "";
+  // geslo je bilo spremenjeno - streznik je ze unicil sejo, uporabnika preusmerimo na prijavo
+  alert(data.message || "Geslo posodobljeno. Ponovno se prijavite.");
+  location.reload();
 });
 
 document.getElementById("saveEmailBtn")?.addEventListener("click", async () => {

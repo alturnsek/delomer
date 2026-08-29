@@ -852,7 +852,8 @@ button:hover {
 #teamList,
 #orgStatsByUserList,
 #platformStatsByOrgList,
-#officialsList {
+#officialsList,
+#loginHistoryList {
   list-style: none;
   padding: 0;
 }
@@ -866,7 +867,8 @@ button:hover {
 #teamList li,
 #orgStatsByUserList li,
 #platformStatsByOrgList li,
-#officialsList li {
+#officialsList li,
+#loginHistoryList li {
   background: white;
   padding: 15px;
   margin-bottom: 10px;

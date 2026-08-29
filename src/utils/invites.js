@@ -10,7 +10,7 @@ function createInviteToken() {
   };
 }
 
-function buildInviteUrl(token) {
+function buildSetPasswordUrl(token) {
   const base = process.env.APP_BASE_URL || "http://localhost:3000";
   return `${base}/set-password.html?token=${token}`;
 }
@@ -27,21 +27,20 @@ async function getEmailMode() {
   }
 }
 
-// Pošlje vabilo - v "log" načinu samo izpiše povezavo v strežniške loge,
-// v "real" načinu dejansko pošlje email preko Resend. Način nastavlja
-// SUPER_ADMIN v UI (app_settings.email_mode), brez potrebe po redeployu.
-async function sendInviteEmail(email, token) {
-  const url = buildInviteUrl(token);
+// Skupna dostava emaila - v "log" načinu (privzeto) samo izpiše fallbackText
+// v strežniške loge, v "real" načinu dejansko pošlje preko Resend. Način
+// nastavlja SUPER_ADMIN v UI (app_settings.email_mode), brez redeploya.
+async function deliverEmail({ to, subject, html, logLabel, fallbackText }) {
   const mode = await getEmailMode();
 
   if (mode !== "real") {
-    console.log(`[INVITE] ${email} -> ${url}`);
+    console.log(`[${logLabel}] ${to} -> ${fallbackText}`);
     return;
   }
 
   if (!process.env.RESEND_API_KEY) {
-    console.error("RESEND_API_KEY manjka v .env - vabilo samo zabeleženo v loge");
-    console.log(`[INVITE] ${email} -> ${url}`);
+    console.error("RESEND_API_KEY manjka v .env - email samo zabeležen v loge");
+    console.log(`[${logLabel}] ${to} -> ${fallbackText}`);
     return;
   }
 
@@ -54,21 +53,49 @@ async function sendInviteEmail(email, token) {
       },
       body: JSON.stringify({
         from: process.env.INVITE_EMAIL_FROM || "Delomer <info@delomer.top>",
-        to: email,
-        subject: "Povabilo v Delomer",
-        html: `<p>Bili ste povabljeni v aplikacijo Delomer.</p><p><a href="${url}">Kliknite tukaj za nastavitev gesla</a></p>`
+        to,
+        subject,
+        html
       })
     });
 
     if (!res.ok) {
       const text = await res.text();
       console.error("RESEND SEND ERROR:", res.status, text);
-      console.log(`[INVITE FALLBACK] ${email} -> ${url}`);
+      console.log(`[${logLabel} FALLBACK] ${to} -> ${fallbackText}`);
     }
   } catch (err) {
     console.error("RESEND SEND ERROR:", err);
-    console.log(`[INVITE FALLBACK] ${email} -> ${url}`);
+    console.log(`[${logLabel} FALLBACK] ${to} -> ${fallbackText}`);
   }
+}
+
+async function sendInviteEmail(email, token) {
+  const url = buildSetPasswordUrl(token);
+
+  await deliverEmail({
+    to: email,
+    subject: "Povabilo v Delomer",
+    html: `<p>Bili ste povabljeni v aplikacijo Delomer.</p><p><a href="${url}">Kliknite tukaj za nastavitev gesla</a></p>`,
+    logLabel: "INVITE",
+    fallbackText: url
+  });
+}
+
+// Obvestilo, da je bilo geslo spremenjeno + povezava za takojšnjo ponastavitev,
+// če sprememba ni bila legitimna (varnostni ukrep).
+async function sendPasswordChangedEmail(email, resetToken) {
+  const resetUrl = buildSetPasswordUrl(resetToken);
+
+  await deliverEmail({
+    to: email,
+    subject: "Vaše geslo je bilo spremenjeno",
+    html: `<p>Geslo za vaš Delomer račun je bilo pravkar spremenjeno.</p>
+           <p>Če to niste bili vi, takoj ponastavite geslo: <a href="${resetUrl}">Ponastavi geslo</a></p>
+           <p>Ta povezava je veljavna 6 ur.</p>`,
+    logLabel: "PASSWORD_CHANGED",
+    fallbackText: resetUrl
+  });
 }
 
 // Ustvari nov (svež, 6-urni) token in ponovno pošlje vabilo - za "Ponovno
@@ -84,4 +111,4 @@ async function issueAndSendInvite(userId, email) {
   await sendInviteEmail(email, token);
 }
 
-module.exports = { createInviteToken, sendInviteEmail, issueAndSendInvite };
+module.exports = { createInviteToken, sendInviteEmail, sendPasswordChangedEmail, issueAndSendInvite };

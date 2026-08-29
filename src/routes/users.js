@@ -6,6 +6,8 @@ const db = require("../config/db");
 const passport = require("passport");
 const { requireAuth } = require("../middleware/roles");
 const { uploadAvatar } = require("../middleware/upload");
+const { createInviteToken, sendPasswordChangedEmail } = require("../utils/invites");
+const { recordLogin } = require("../utils/loginHistory");
 
 const router = express.Router();
 
@@ -37,7 +39,8 @@ router.post("/login", (req, res, next) => {
       if (err) return next(err);
 
       // ✅ session commit
-      req.session.save(() => {
+      req.session.save(async () => {
+        await recordLogin(req, user.id);
         res.json({ message: "OK", user: toPublicUser(user) });
       });
     });
@@ -128,12 +131,13 @@ router.post("/invite/:token/activate", async (req, res) => {
         return res.status(500).json({ message: "Login error" });
       }
 
-      req.session.save((err) => {
+      req.session.save(async (err) => {
         if (err) {
           console.error("SESSION SAVE ERROR:", err);
           return res.status(500).json({ message: "Session save error" });
         }
 
+        await recordLogin(req, user.id);
         res.json({ message: "Account activated", user: toPublicUser(user) });
       });
     });
@@ -199,10 +203,26 @@ router.post("/me/password", requireAuth, async (req, res) => {
     }
 
     const password_hash = await bcrypt.hash(new_password, 10);
+    const userId = req.user.id;
+    const userEmail = req.user.email;
 
-    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [password_hash, req.user.id]);
+    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [password_hash, userId]);
 
-    res.json({ message: "Geslo posodobljeno" });
+    // varnostni ukrep: nov token za takojšnjo ponastavitev, če sprememba ni bila legitimna
+    const { token, expiresAt } = createInviteToken();
+    await db.query(
+      "UPDATE users SET invite_token = ?, invite_token_expires_at = ? WHERE id = ?",
+      [token, expiresAt, userId]
+    );
+    await sendPasswordChangedEmail(userEmail, token);
+
+    // po spremembi gesla obvezno odjavimo trenutno sejo
+    req.logout(() => {
+      req.session.destroy(() => {
+        res.clearCookie("connect.sid");
+        res.json({ message: "Geslo posodobljeno. Prosimo, ponovno se prijavite." });
+      });
+    });
   } catch (err) {
     console.error("CHANGE PASSWORD ERROR:", err);
     res.status(500).json({ message: "Server error" });
@@ -302,6 +322,28 @@ router.get("/me/stats", requireAuth, async (req, res) => {
     })));
   } catch (err) {
     console.error("GET STATS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
+  ZGODOVINA PRIJAV (za "Moj profil")
+========================= */
+router.get("/me/login-history", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.query(
+      `SELECT ip_address, location, browser, created_at
+       FROM login_history
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [req.user.id]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("GET LOGIN HISTORY ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
