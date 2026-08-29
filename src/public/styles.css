@@ -163,6 +163,13 @@ input:focus {
   outline: none;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  padding: 0;
+  margin: 0;
+}
+
 select,
 textarea {
   width: 100%;
@@ -219,6 +226,12 @@ code {
   margin: 0;
   flex: 1;
   min-width: 140px;
+}
+
+.participant-controls input[type="checkbox"] {
+  flex: none;
+  min-width: 0;
+  width: auto;
 }
 
 .participant-row {
