@@ -27,6 +27,17 @@ function statusLabel(status) {
   return STATUS_LABELS[status] || status;
 }
 
+const ROLE_LABELS = {
+  SUPER_ADMIN: "Super administrator",
+  ADMIN: "Administrator",
+  SUPERINTENDENT: "Nadzornik",
+  MEMBER: "Član"
+};
+
+function roleLabel(role) {
+  return ROLE_LABELS[role] || role;
+}
+
 /* =========================
   VIEW ROUTING (sidebar meni)
 ========================= */
@@ -336,9 +347,9 @@ function renderRoleManagedMember(m, roleEndpointBase) {
       <span>${m.first_name} ${m.last_name} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
       <div class="actions">
         <select class="roleSelect" data-id="${m.id}" data-endpoint="${roleEndpointBase}">
-          <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
-          <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
-          <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
+          <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>${roleLabel("MEMBER")}</option>
+          <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>${roleLabel("SUPERINTENDENT")}</option>
+          <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>${roleLabel("ADMIN")}</option>
         </select>
       </div>
     </li>
@@ -406,6 +417,28 @@ async function loadOrgMembers() {
     });
   });
 
+  document.querySelectorAll(".deactivateMemberBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/admin/users/${btn.dataset.id}/deactivate`, {
+        method: "POST",
+        credentials: "include"
+      });
+
+      loadOrgMembers();
+    });
+  });
+
+  document.querySelectorAll(".activateMemberBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/admin/users/${btn.dataset.id}/activate`, {
+        method: "POST",
+        credentials: "include"
+      });
+
+      loadOrgMembers();
+    });
+  });
+
   document.querySelectorAll(".saveMemberBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
@@ -445,22 +478,14 @@ function renderOrgMember(m) {
   const isSelf = m.id === currentUserId;
   const canManage = currentUserRole === "ADMIN";
   const nameHtml = `<a href="#" class="member-name-link" data-id="${m.id}">${m.first_name} ${m.last_name}</a>`;
+  const inactiveNote = m.is_active ? "" : " (deaktiviran)";
 
   return `
-    <li class="member-item" data-id="${m.id}">
+    <li class="member-item${m.is_active ? "" : " member-inactive"}" data-id="${m.id}">
       <div class="member-row">
-        <span>${nameHtml} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}</span>
+        <span>${nameHtml} — ${m.email}${m.activated ? "" : " (čaka aktivacijo)"}${inactiveNote}</span>
         <div class="actions">
-          ${!canManage
-            ? `<span class="status-badge">${m.role}</span>`
-            : isSelf
-              ? `<span class="status-badge">${m.role}</span>`
-              : `<select class="roleSelect" data-id="${m.id}" data-endpoint="/api/admin/users">
-                  <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>MEMBER</option>
-                  <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>SUPERINTENDENT</option>
-                  <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>ADMIN</option>
-                </select>`
-          }
+          <span class="status-badge">${roleLabel(m.role)}</span>
           ${canManage ? `<button class="editMemberBtn icon-btn btn-edit" data-id="${m.id}">✏️</button>` : ""}
         </div>
       </div>
@@ -478,9 +503,23 @@ function renderOrgMember(m) {
           <label>Email</label>
           <input class="editEmail" value="${m.email}" type="email">
         </div>
+        ${!isSelf ? `
+        <div class="field">
+          <label>Vloga</label>
+          <select class="roleSelect" data-id="${m.id}" data-endpoint="/api/admin/users">
+            <option value="MEMBER" ${m.role === "MEMBER" ? "selected" : ""}>${roleLabel("MEMBER")}</option>
+            <option value="SUPERINTENDENT" ${m.role === "SUPERINTENDENT" ? "selected" : ""}>${roleLabel("SUPERINTENDENT")}</option>
+            <option value="ADMIN" ${m.role === "ADMIN" ? "selected" : ""}>${roleLabel("ADMIN")}</option>
+          </select>
+        </div>
+        ` : ""}
         <div id="editMemberMsg-${m.id}" class="error"></div>
         <div class="edit-actions">
           <button class="saveMemberBtn icon-btn btn-edit" data-id="${m.id}">Shrani</button>
+          ${!isSelf ? (m.is_active
+            ? `<button class="deactivateMemberBtn icon-btn btn-reject" data-id="${m.id}">Deaktiviraj</button>`
+            : `<button class="activateMemberBtn icon-btn btn-approve" data-id="${m.id}">Aktiviraj</button>`
+          ) : ""}
           <button class="cancelMemberEditBtn secondary-btn" data-id="${m.id}">Prekliči</button>
         </div>
       </div>
@@ -1454,7 +1493,7 @@ async function openMemberDetail(userId) {
   document.getElementById("memberDetailFirstName").innerText = m.first_name;
   document.getElementById("memberDetailLastName").innerText = m.last_name;
   document.getElementById("memberDetailEmail").innerText = m.email;
-  document.getElementById("memberDetailRole").innerText = m.role;
+  document.getElementById("memberDetailRole").innerText = roleLabel(m.role);
   document.getElementById("memberDetailAvatarImg").src = m.avatar_path || "logo.png";
 
   const now = new Date();

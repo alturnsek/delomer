@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   invite_token VARCHAR(255) NULL,
   invite_token_expires_at DATETIME NULL,
   avatar_path VARCHAR(255) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1, -- deaktiviran uporabnik ne more dodajati/biti dodan v delo
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_invite_token (invite_token),
   CONSTRAINT fk_users_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL

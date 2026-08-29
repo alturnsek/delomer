@@ -19,7 +19,7 @@ router.use(canManageWork);
 router.get("/users", async (req, res) => {
   try {
     const rows = await db.query(
-      `SELECT id, first_name, last_name, email, role,
+      `SELECT id, first_name, last_name, email, role, is_active,
               (password_hash != '') AS activated
        FROM users
        WHERE organization_id = ?
@@ -40,7 +40,7 @@ router.get("/users", async (req, res) => {
 router.get("/users/:id", async (req, res) => {
   try {
     const rows = await db.query(
-      `SELECT id, first_name, last_name, email, role, avatar_path,
+      `SELECT id, first_name, last_name, email, role, avatar_path, is_active,
               (password_hash != '') AS activated
        FROM users
        WHERE id = ? AND organization_id = ?`,
@@ -240,6 +240,49 @@ router.post("/users/:id/role", canManageUsers, async (req, res) => {
     res.json({ message: "Vloga posodobljena" });
   } catch (err) {
     console.error("CHANGE ROLE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+  (DE)AKTIVACIJA ČLANA
+========================= */
+router.post("/users/:id/deactivate", canManageUsers, async (req, res) => {
+  try {
+    if (Number(req.params.id) === req.user.id) {
+      return res.status(400).json({ message: "Svojega računa ne moreš deaktivirati" });
+    }
+
+    const result = await db.query(
+      "UPDATE users SET is_active = 0 WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    res.json({ message: "Uporabnik deaktiviran" });
+  } catch (err) {
+    console.error("DEACTIVATE USER ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/users/:id/activate", canManageUsers, async (req, res) => {
+  try {
+    const result = await db.query(
+      "UPDATE users SET is_active = 1 WHERE id = ? AND organization_id = ?",
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Uporabnik ni najden" });
+    }
+
+    res.json({ message: "Uporabnik aktiviran" });
+  } catch (err) {
+    console.error("ACTIVATE USER ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

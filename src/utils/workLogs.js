@@ -57,7 +57,7 @@ async function resolveOrgParticipants(conn, organizationId, rawParticipants) {
   const placeholders = ids.map(() => "?").join(",");
 
   const validRows = await conn.query(
-    `SELECT id FROM users WHERE id IN (${placeholders}) AND organization_id = ?`,
+    `SELECT id FROM users WHERE id IN (${placeholders}) AND organization_id = ? AND is_active = 1`,
     [...ids, organizationId]
   );
 

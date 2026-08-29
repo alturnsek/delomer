@@ -38,7 +38,7 @@ router.get('/organization-members', async (req, res) => {
 
     const rows = await pool.query(
       `SELECT id, first_name, last_name FROM users
-       WHERE organization_id = ? AND id != ?
+       WHERE organization_id = ? AND id != ? AND is_active = 1
        ORDER BY first_name ASC, last_name ASC`,
       [req.user.organization_id, req.user.id]
     );
@@ -99,6 +99,10 @@ router.post('/', async (req, res) => {
   const conn = await pool.getConnection();
 
   try {
+    if (!req.user.is_active) {
+      return res.status(403).json({ error: "Vaš račun je deaktiviran, ne morete dodajati dela" });
+    }
+
     const { task, started_at, ended_at, category_id, participants } = req.body;
 
     if (!task) {

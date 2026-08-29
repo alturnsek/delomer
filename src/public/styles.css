@@ -244,6 +244,11 @@ code {
   background: #64748b;
 }
 
+#orgMembersList .member-item.member-inactive {
+  opacity: 0.55;
+  background: #f1f5f9;
+}
+
 #orgMembersList .member-item {
   display: flex;
   flex-direction: column;
