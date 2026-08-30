@@ -6,6 +6,16 @@ Delovni seznam za nadaljnji razvoj na `dev` veji. `main` ostaja zamrznjen za pre
 
 Prvotni projektni načrt živi v Jira backlogu, izvožen v [ostalo/Jira.html](ostalo/Jira.html) (131 issue-jev, KAN-5 do KAN-135, vsi še v statusu Backlog). Ta datoteka povzema tisti načrt v obliki checklist-a in dodaja sprotne TODO-je iz razvoja/deploya, ki jih je smiselno reševati tekoče.
 
+**Milestone branch**: `milestone-v1-poc` (ustvarjen iz `dev` na commit `82122aa`) je zamrznjen posnetek prvega delujočega proof-of-concept-a (vabila/vloge, vnos+potrjevanje dela, statistika, javni kiosk račun, člani brez računa, samopostrežna registracija) - namenjen za kasnejšo demonstracijo, ne za nadaljnji razvoj. `dev` se od te točke naprej razvija naprej z naslednjo fazo spodaj.
+
+## Naslednja faza (po prvem POC-u)
+
+- [ ] **Internacionalizacija (i18n)**: privzeto slovenščina, dodaj vsaj angleški prevod. Trenutno je vse besedilo trdo zapisano v slovenščini po `index.html`/`script.js` (labels, sporočila, `STATUS_LABELS`/`ROLE_LABELS` ipd.) - potrebna bo ločena struktura prevodov (npr. JSON slovar po jeziku) in izbirnik jezika, verjetno v uporabniških nastavitvah ali headerju.
+- [ ] **Svetla/temna tema**: preklop teme, verjetno CSS custom properties (spremenljivke) namesto trdo zapisanih barv v `styles.css`, shranjevanje izbire (localStorage ali `users`/`app_settings`).
+- [ ] **Landing stran na `www.delomer.top`**: ločena marketinška stran (opis aplikacije, kontaktni podatki) - `app.delomer.top` ostaja sama aplikacija. Verjetno ločen statični site/deploy, ne del tega Express projekta.
+- [ ] **Uporabniška navodila**: navodila za uporabo aplikacije za končne uporabnike; posebej tudi kratka navodila/plakat za ob kiosku (javni PUBLIC račun) - fizični pripomoček ob tablici/računalniku v prostorih društva.
+- [ ] **Responsive design za tablice/mobilne naprave**: trenutni layout (sidebar, tabele, forme) je bil zgrajen brez posebnega upoštevanja ozkih zaslonov - potreben pregled/prilagoditev za tablice in mobilnike, verjetno najprej pomembno za kiosk (ta pogosto teče na tablici) in "Vnos dela" na mobilnem telefonu.
+
 ## Varnost / pred pravim produkcijskim zagonom
 
 - [ ] Odstrani (ali pogojno onemogoči) debug middleware v [src/app.js](src/app.js#L20-L26), ki v loge izpisuje surov `Cookie` header (vsebuje session ID-je uporabnikov). Trenutno pustimo, ker ni pravih uporabnikov — obvezno odstraniti pred javnim zagonom za prava društva.
