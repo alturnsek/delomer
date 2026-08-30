@@ -8,6 +8,7 @@ const { requireAuth } = require("../middleware/roles");
 const { uploadAvatar } = require("../middleware/upload");
 const { createInviteToken, sendPasswordChangedEmail, sendAccountClaimedEmail } = require("../utils/invites");
 const { recordLogin } = require("../utils/loginHistory");
+const { isPasswordValid, PASSWORD_POLICY_MESSAGE } = require("../utils/password");
 
 const router = express.Router();
 
@@ -92,8 +93,8 @@ router.post("/invite/:token/activate", async (req, res) => {
   try {
     const { password } = req.body;
 
-    if (!password || password.length < 6) {
-      return res.status(400).json({ message: "Geslo mora imeti vsaj 6 znakov" });
+    if (!isPasswordValid(password)) {
+      return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
     }
 
     const rows = await db.query(
@@ -188,8 +189,8 @@ router.post("/join/:code/claim", async (req, res) => {
   try {
     const { member_id, email, password } = req.body;
 
-    if (!password || password.length < 6) {
-      return res.status(400).json({ message: "Geslo mora imeti vsaj 6 znakov" });
+    if (!isPasswordValid(password)) {
+      return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
     }
 
     const cleanEmail = (email || "").trim().toLowerCase();
@@ -307,6 +308,10 @@ router.post("/me/password", requireAuth, async (req, res) => {
 
     if (!old_password || !new_password) {
       return res.status(400).json({ message: "Izpolni vsa polja" });
+    }
+
+    if (!isPasswordValid(new_password)) {
+      return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
     }
 
     const rows = await db.query("SELECT password_hash FROM users WHERE id = ?", [req.user.id]);

@@ -392,6 +392,24 @@ button svg {
   margin-bottom: 5px;
 }
 
+.password-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 2px 0 10px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.password-checklist .req-ok {
+  color: #16a34a;
+}
+
+.password-checklist .req-fail {
+  color: #94a3b8;
+}
+
 input.errorInput {
   border: 2px solid #ef4444 !important;
   background-color: #fef2f2;

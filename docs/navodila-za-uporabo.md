@@ -30,7 +30,7 @@ Registracija ni javna — do aplikacije dostopate na enega od dveh načinov:
 
 ### a) Vabilo po emailu
 
-Administrator vas doda v sistem in na vaš email prejmete povezavo z naslovom "Povabilo v Delomer". Povezava je veljavna **6 ur**. Ob kliku nastavite geslo (vsaj 6 znakov) in ste takoj prijavljeni.
+Administrator vas doda v sistem in na vaš email prejmete povezavo z naslovom "Povabilo v Delomer". Povezava je veljavna **6 ur**. Ob kliku nastavite geslo (glej zahteve za geslo spodaj) in ga potrdite v drugo polje, nato ste takoj prijavljeni.
 
 Če povezava poteče, prosite administratorja, naj klikne "Ponovno pošlji vabilo" pri vašem imenu.
 
@@ -41,6 +41,18 @@ Nekatera društva vnaprej dodajo seznam vseh svojih članov, tudi tistih brez em
 1. Poiščete svoje ime na seznamu.
 2. Vnesete svoj email in si izberete geslo.
 3. Ste takoj prijavljeni kot pravi uporabnik.
+
+### Zahteve za geslo
+
+Ob vsakem nastavljanju novega gesla (aktivacija vabila, samopostrežna registracija, sprememba gesla v profilu) je treba geslo vnesti dvakrat (mora se ujemati) in izpolnjevati vse spodnje pogoje - stran vam ob tipkanju sproti kaže s kljukicami/križci, kateri so že izpolnjeni:
+
+- vsaj 10 znakov,
+- vsaj ena velika črka,
+- vsaj ena mala črka,
+- vsaj ena številka,
+- vsaj en poseben znak (npr. `! @ # $ % &`).
+
+Te zahteve veljajo samo pri **nastavljanju** gesla - pri prijavi z obstoječim geslom se preverja samo, ali se ujema s shranjenim (starejši uporabniki s krajšim geslom se torej lahko še naprej prijavljajo, dokler ga ne spremenijo).
 
 ### Prijava
 

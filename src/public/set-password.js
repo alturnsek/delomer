@@ -25,15 +25,23 @@ async function loadInvite() {
     (data.organization_name ? ` — ${data.organization_name}` : "");
 }
 
+wirePasswordChecklist("new-password", "newPasswordChecklist");
+
 document.getElementById("activateBtn").addEventListener("click", async () => {
   const token = getToken();
-  const password = document.getElementById("new-password").value.trim();
+  const password = document.getElementById("new-password").value;
+  const confirmPassword = document.getElementById("confirm-password").value;
   const err = document.getElementById("passwordError");
 
   err.innerText = "";
 
-  if (!password || password.length < 6) {
-    err.innerText = "Geslo mora imeti vsaj 6 znakov";
+  if (!isPasswordValid(password)) {
+    err.innerText = "Geslo ne izpolnjuje vseh zahtev spodaj";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    err.innerText = "Gesli se ne ujemata";
     return;
   }
 

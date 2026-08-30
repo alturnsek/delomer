@@ -2753,6 +2753,8 @@ document.getElementById("profileSettingsBtn")?.addEventListener("click", () => {
   document.getElementById("profileSettingsPanel")?.classList.toggle("hidden");
 });
 
+wirePasswordChecklist("newPasswordInput", "newPasswordChecklist");
+
 document.getElementById("savePasswordBtn")?.addEventListener("click", async () => {
   const old_password = document.getElementById("oldPasswordInput").value;
   const new_password = document.getElementById("newPasswordInput").value;
@@ -2764,6 +2766,11 @@ document.getElementById("savePasswordBtn")?.addEventListener("click", async () =
 
   if (!old_password || !new_password || !confirm_password) {
     msg.innerText = "Izpolni vsa polja";
+    return;
+  }
+
+  if (!isPasswordValid(new_password)) {
+    msg.innerText = "Novo geslo ne izpolnjuje vseh zahtev zgoraj";
     return;
   }
 

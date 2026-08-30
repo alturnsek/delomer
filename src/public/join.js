@@ -55,11 +55,13 @@ async function loadJoin() {
 }
 
 document.getElementById("joinSearch").addEventListener("input", renderMemberList);
+wirePasswordChecklist("joinPassword", "newPasswordChecklist");
 
 document.getElementById("joinSubmitBtn").addEventListener("click", async () => {
   const code = getCode();
   const email = document.getElementById("joinEmail").value.trim();
   const password = document.getElementById("joinPassword").value;
+  const confirmPassword = document.getElementById("joinPasswordConfirm").value;
   const err = document.getElementById("joinError");
 
   err.innerText = "";
@@ -74,8 +76,13 @@ document.getElementById("joinSubmitBtn").addEventListener("click", async () => {
     return;
   }
 
-  if (!password || password.length < 6) {
-    err.innerText = "Geslo mora imeti vsaj 6 znakov";
+  if (!isPasswordValid(password)) {
+    err.innerText = "Geslo ne izpolnjuje vseh zahtev spodaj";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    err.innerText = "Gesli se ne ujemata";
     return;
   }
 
