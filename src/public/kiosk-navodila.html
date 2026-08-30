@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Navodila ob kiosku — Delomer</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Inter", Arial, sans-serif;
+    color: #1a1a1a;
+    background: #f7f9fc;
+  }
+
+  .print-bar {
+    text-align: center;
+    padding: 16px;
+  }
+
+  .print-bar button {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .print-bar button:hover {
+    background: #4338ca;
+  }
+
+  .poster {
+    max-width: 800px;
+    margin: 0 auto 40px;
+    background: white;
+    padding: 60px 56px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+
+  .poster-logo {
+    display: block;
+    height: 70px;
+    margin: 0 auto 24px;
+  }
+
+  .poster h1 {
+    text-align: center;
+    font-size: 32px;
+    margin: 0 0 8px;
+  }
+
+  .poster .subtitle {
+    text-align: center;
+    color: #555;
+    font-size: 17px;
+    margin: 0 0 44px;
+  }
+
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 40px;
+    counter-reset: step;
+  }
+
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .steps li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #4f46e5;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .steps li .step-text {
+    font-size: 19px;
+    line-height: 1.5;
+    padding-top: 6px;
+  }
+
+  .steps li .step-text strong {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+
+  .note {
+    background: #eef2ff;
+    border-radius: 12px;
+    padding: 18px 22px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333;
+  }
+
+  .own-account {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 14px;
+    color: #666;
+  }
+
+  @media print {
+    body {
+      background: white;
+    }
+
+    .print-bar {
+      display: none;
+    }
+
+    .poster {
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      margin: 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <button onclick="window.print()">Natisni</button>
+</div>
+
+<div class="poster">
+  <img class="poster-logo" src="logo.png" alt="Delomer">
+  <h1>Si danes pomagal/a društvu?</h1>
+  <p class="subtitle">Vnesi opravljeno delo na tej napravi v treh korakih.</p>
+
+  <ol class="steps">
+    <li>
+      <div class="step-text">
+        <strong>Vpiši, kaj si delal/a</strong>
+        ter uro začetka in konca dela.
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <strong>Izberi sodelavce</strong>
+        sebe in vse druge, ki so pomagali - lahko izbereš tudi kar celo ekipo naenkrat z gumbom "+ Dodaj ekipo".
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <strong>Klikni "+ Dodaj"</strong>
+        in tvoje delo bo zabeleženo.
+      </div>
+    </li>
+  </ol>
+
+  <div class="note">
+    Vnos bo pregledal upravni odbor društva. Vprašanja glede vnosa naslovite na funkcionarje društva.
+  </div>
+
+  <p class="own-account">Želiš svoj osebni račun (za vnos dela tudi od doma)? Povej upravnemu odboru društva.</p>
+</div>
+
+</body>
+</html>
