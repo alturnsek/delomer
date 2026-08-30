@@ -2132,7 +2132,7 @@ function renderAdminWorkItem(w) {
           <strong>${formatDateDisplay(w.started_at)}</strong> · <strong>${w.creator_first_name} ${w.creator_last_name}</strong> — ${w.task}
           <span class="status-badge status-${w.status}">${statusLabel(w.status)}</span>${correctedBadge}<br>
           <small>${w.category_name || "brez kategorije"} · ${hours} · sodelavci: ${participants || "-"}</small>
-          ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog: ${w.rejection_reason}</small>` : ""}
+          ${w.status === "REJECTED" && w.rejection_reason ? `<br><small class="rejection-reason">Razlog: ${w.rejection_reason}</small>` : ""}
         </span>
         <div class="actions">
           ${w.status === "PENDING" ? `
@@ -2194,7 +2194,7 @@ async function loadWork() {
         ${w.task}
         <span class="status-badge status-${w.status}">${statusLabel(w.status)}</span>${correctedBadge}<br>
         <small>${w.category_name || "brez kategorije"}${participantNames ? " · " + participantNames : ""}</small>
-        ${w.status === "REJECTED" && w.rejection_reason ? `<br><small>Razlog zavrnitve: ${w.rejection_reason}</small>` : ""}
+        ${w.status === "REJECTED" && w.rejection_reason ? `<br><small class="rejection-reason">Razlog zavrnitve: ${w.rejection_reason}</small>` : ""}
       </span>
       <div class="actions">
         <strong>${hours}</strong>

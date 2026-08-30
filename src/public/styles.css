@@ -259,6 +259,19 @@ code {
   background: #64748b;
 }
 
+.help-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 /* Osivi samo besedilo/oznako vloge v strnjeni vrstici - gumb za urejanje
    in odprt edit-panel ostaneta polnobarvna in berljiva. */
 #orgMembersList .member-item.member-inactive,
@@ -377,6 +390,11 @@ button svg {
   font-size: 11px;
   font-weight: 600;
   margin-left: 6px;
+}
+
+.rejection-reason {
+  color: #ef4444;
+  font-weight: 700;
 }
 
 .status-PENDING { background: #fef3c7; color: #92400e; }
