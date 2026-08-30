@@ -1002,6 +1002,7 @@ body:not(.loading) #loader {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .actions select {
