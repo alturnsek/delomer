@@ -84,6 +84,27 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 /* =========================
+  LANDING STRAN (delomer.top / www.delomer.top) - ločena marketinška stran,
+  aplikacija sama teče samo na app.delomer.top. Isti Nginx Proxy Manager
+  cilj (isti kontejner/port), ločevanje glede na Host header.
+========================= */
+const LANDING_HOSTS = (process.env.LANDING_HOSTS || "delomer.top,www.delomer.top").split(",");
+const landingStatic = express.static(path.join(__dirname, "landing"));
+
+app.use((req, res, next) => {
+  if (!LANDING_HOSTS.includes(req.hostname)) {
+    return next();
+  }
+
+  // na tej domeni obstaja samo marketinška stran - nikoli ne pade skozi
+  // na API/SPA route spodaj, tudi če zahtevana pot ne obstaja
+  landingStatic(req, res, (err) => {
+    if (err) return next(err);
+    res.sendFile(path.join(__dirname, "landing", "index.html"));
+  });
+});
+
+/* =========================
   STATIC FILES
 ========================= */
 app.use(express.static(path.join(__dirname, "public")));
