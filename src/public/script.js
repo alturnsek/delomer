@@ -160,6 +160,9 @@ function showView(viewName) {
   if (link) link.classList.add("active");
 
   if (VIEW_LOADERS[viewName]) VIEW_LOADERS[viewName]();
+
+  // na tablici/mobilnem meni po izbiri strani ne sme ostati čez celo vsebino
+  if (isMobileViewport()) sidebar.classList.add("hidden");
 }
 
 document.querySelectorAll(".nav-link").forEach(link => {
@@ -185,19 +188,45 @@ document.querySelectorAll(".subtab-btn").forEach(btn => {
   });
 });
 
+const MOBILE_BREAKPOINT = 768;
+
+function isMobileViewport() {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
 function isSidebarOpenPreferred() {
   const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
   return stored === null ? true : stored === "1";
 }
 
 function applySidebarState() {
+  // na tablici/mobilnem se meni vedno začne zaprt (lahko bi prekril celotno
+  // vsebino) - shranjena namizna nastavitev se uporabi samo nad MOBILE_BREAKPOINT
+  if (isMobileViewport()) {
+    sidebar.classList.add("hidden");
+    return;
+  }
+
   sidebar.classList.toggle("hidden", !isSidebarOpenPreferred());
 }
 
 document.getElementById("burgerBtn")?.addEventListener("click", () => {
   const nowOpen = sidebar.classList.contains("hidden");
   sidebar.classList.toggle("hidden", !nowOpen);
-  localStorage.setItem(SIDEBAR_STORAGE_KEY, nowOpen ? "1" : "0");
+
+  // shranjevanje nastavitve v localStorage samo za namizje - na mobilnem gre
+  // za začasen odpri/zapri klik, ne za trajno preferenco
+  if (!isMobileViewport()) {
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, nowOpen ? "1" : "0");
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!isMobileViewport()) return;
+  if (sidebar.classList.contains("hidden")) return;
+  if (e.target.closest("#sidebar") || e.target.closest("#burgerBtn")) return;
+
+  sidebar.classList.add("hidden");
 });
 
 

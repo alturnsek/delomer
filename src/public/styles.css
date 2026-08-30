@@ -1054,3 +1054,115 @@ body:not(.loading) #loader {
   border: 2px solid #3b82f6;
 }
 
+/* =========================
+  RESPONSIVE (tablice/mobilni) - do zdaj je bil layout fiksen samo za namizje
+========================= */
+html, body {
+  overflow-x: hidden;
+}
+
+/* .row (datumski filtri, hitre bližnjice, "Ime,Priimek" vrstice) je bil edini
+   flex brez flex-wrap v celi aplikaciji - na ozkem zaslonu je silil vsebino
+   v vodoravni prelivi namesto da bi se prestavila v nov nastavek. */
+.row {
+  flex-wrap: wrap;
+}
+
+.actions,
+.edit-actions,
+.confirm-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .main-header {
+    height: 70px;
+    padding: 0 10px;
+  }
+
+  .logo img {
+    height: 50px;
+  }
+
+  .burger-btn {
+    left: 8px;
+    padding: 6px 10px;
+    font-size: 18px;
+  }
+
+  .header-right {
+    right: 10px;
+    gap: 8px;
+  }
+
+  /* na ozkem zaslonu ni prostora za pozdravno besedilo poleg centriranega
+     logotipa (oba sta position:absolute) - obdrži samo gumb za odjavo */
+  #headerUser {
+    display: none;
+  }
+
+  .sidebar {
+    top: 70px;
+    width: 80vw;
+    max-width: 280px;
+  }
+
+  .content {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
+
+  .container {
+    margin: 40px auto;
+    max-width: 92vw;
+  }
+
+  .work-form,
+  .profile-card,
+  .chart-container {
+    padding: 14px;
+  }
+
+  .chart-container {
+    height: 260px;
+  }
+
+  .profile-avatar {
+    width: 90px;
+    height: 90px;
+  }
+
+  #workList li,
+  #orgList li,
+  #orgMembersList li,
+  #categoryList li,
+  #adminWorkList li,
+  #orgAdminsList li,
+  #teamList li,
+  #orgStatsByUserList li,
+  #platformStatsByOrgList li,
+  #officialsList li,
+  #loginHistoryList li,
+  .member-row {
+    flex-wrap: wrap;
+  }
+
+  .participant-controls input,
+  .participant-controls select,
+  .dropdown-check-filter {
+    min-width: 120px;
+  }
+
+  .confirm-box {
+    width: 90vw;
+    max-width: 320px;
+  }
+
+  /* iOS Safari samodejno približa stran ob fokusu na input s font-size < 16px */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
