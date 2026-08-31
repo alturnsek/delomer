@@ -16,3 +16,6 @@ ostalo/
 
 # naložene datoteke uporabnikov (profilne slike ipd.) - persistirajo v Docker volumnu, ne v gitu
 uploads/
+
+# lokalna navodila za Claude Code, ne za git
+CLAUDE.md
