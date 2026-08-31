@@ -20,12 +20,9 @@
     "express-session": "^1.19.0",
     "geoip-lite": "^2.0.3",
     "helmet": "^8.2.0",
-    "jsonwebtoken": "^9.0.3",
     "mariadb": "^3.5.3",
     "multer": "^2.3.0",
     "passport": "^0.7.0",
-    "passport-facebook": "^3.0.0",
-    "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
     "ua-parser-js": "^2.0.10"
   },

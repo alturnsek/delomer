@@ -266,25 +266,6 @@ router.post("/join/:code/claim", async (req, res) => {
 
 
 /* =========================
-  GOOGLE AUTH - to ne dela
-========================= */
-router.get("/auth/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"]
-  })
-);
-
-router.get("/auth/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/"
-  }),
-  (req, res) => {
-    res.redirect("/");
-  }
-);
-
-
-/* =========================
   CURRENT USER
 ========================= */
 router.get("/me", (req, res) => {
