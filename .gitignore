@@ -19,3 +19,6 @@ uploads/
 
 # lokalna navodila za Claude Code, ne za git
 CLAUDE.md
+
+# osebne IDE nastavitve
+*.code-workspace
