@@ -1979,7 +1979,7 @@ function renderAdminWorkList() {
 
   const from = document.getElementById("approvalsDateFrom")?.value || "";
   const to = document.getElementById("approvalsDateTo")?.value || "";
-  const statusFilter = document.getElementById("approvalsStatusFilter")?.value || "ALL";
+  const statusFilters = Array.from(document.querySelectorAll("#approvalsStatusPanel input:checked")).map(cb => cb.value);
 
   const items = adminWorkCache.filter(w => {
     const workDate = (w.started_at || "").slice(0, 10);
@@ -1987,10 +1987,12 @@ function renderAdminWorkList() {
     if (from && workDate < from) return false;
     if (to && workDate > to) return false;
 
-    if (statusFilter === "ALL") return true;
-    if (statusFilter === "PENDING_CORRECTED") return w.status === "PENDING" && !!w.rejection_reason;
-    if (statusFilter === "PENDING") return w.status === "PENDING" && !w.rejection_reason;
-    return w.status === statusFilter;
+    if (!statusFilters.length) return true;
+
+    const isPendingCorrected = w.status === "PENDING" && !!w.rejection_reason;
+    const bucket = isPendingCorrected ? "PENDING_CORRECTED" : w.status;
+
+    return statusFilters.includes(bucket);
   });
 
   list.innerHTML = items.length
@@ -2099,7 +2101,7 @@ document.getElementById("filterClear")?.addEventListener("click", () => {
 
 document.getElementById("approvalsDateFrom")?.addEventListener("change", renderAdminWorkList);
 document.getElementById("approvalsDateTo")?.addEventListener("change", renderAdminWorkList);
-document.getElementById("approvalsStatusFilter")?.addEventListener("change", renderAdminWorkList);
+setupDropdownCheckFilter("approvalsStatusBtn", "approvalsStatusPanel", "Status", renderAdminWorkList);
 
 function formatParticipant(p, defaultMinutes) {
   const minutes = p.minutes_override === null || p.minutes_override === undefined ? defaultMinutes : p.minutes_override;

@@ -432,15 +432,14 @@
             <button type="button" id="filterClear" class="secondary-btn">Počisti</button>
           </div>
 
-          <div class="field">
-            <label>Status</label>
-            <select id="approvalsStatusFilter">
-              <option value="ALL">Vsi</option>
-              <option value="PENDING">V obravnavi</option>
-              <option value="PENDING_CORRECTED">V obravnavi (popravljeno po zavrnitvi)</option>
-              <option value="APPROVED">Potrjeno</option>
-              <option value="REJECTED">Zavrnjeno</option>
-            </select>
+          <div class="dropdown-check-filter">
+            <button type="button" class="dropdown-check-btn" id="approvalsStatusBtn" data-target="approvalsStatusPanel">Status: Vsi ▾</button>
+            <div class="dropdown-check-panel hidden" id="approvalsStatusPanel">
+              <label><input type="checkbox" value="PENDING"> V obravnavi</label>
+              <label><input type="checkbox" value="PENDING_CORRECTED"> V obravnavi (popravljeno po zavrnitvi)</label>
+              <label><input type="checkbox" value="APPROVED"> Potrjeno</label>
+              <label><input type="checkbox" value="REJECTED"> Zavrnjeno</label>
+            </div>
           </div>
         </div>
 
