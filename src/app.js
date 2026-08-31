@@ -5,7 +5,6 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const session = require("express-session");
 const passport = require("passport");
-const auth = require("./middleware/auth");
 require("dotenv").config();
 
 // routes
