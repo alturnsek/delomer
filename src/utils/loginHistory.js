@@ -45,4 +45,4 @@ async function recordLogin(req, userId) {
   }
 }
 
-module.exports = { recordLogin };
+module.exports = { recordLogin, getClientIp, describeBrowser, describeLocation };
