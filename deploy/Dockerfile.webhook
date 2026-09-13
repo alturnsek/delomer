@@ -1,0 +1,14 @@
+# Ločen, minimalen kontejner za deploy/webhook-server.js na TrueNAS.
+# Vsebuje docker CLI (ne cel Docker daemon), da lahko deploy-truenas.sh
+# znotraj kontejnerja upravlja sosednje kontejnere prek montiranega
+# /var/run/docker.sock (gostiteljev Docker daemon).
+FROM node:20-alpine
+
+RUN apk add --no-cache docker-cli docker-cli-compose bash
+
+WORKDIR /app
+COPY deploy/webhook-server.js ./webhook-server.js
+COPY deploy/deploy-truenas.sh ./deploy.sh
+RUN chmod +x ./deploy.sh
+
+CMD ["node", "webhook-server.js"]

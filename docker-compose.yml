@@ -38,6 +38,20 @@ services:
       db:
         condition: service_healthy
 
+  deploy-webhook:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.webhook
+    restart: unless-stopped
+    environment:
+      DEPLOY_WEBHOOK_SECRET: ${DEPLOY_WEBHOOK_SECRET}
+      WEBHOOK_PORT: 9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace:ro
+    networks:
+      - npm_proxy
+
 networks:
   npm_proxy:
     external: true
