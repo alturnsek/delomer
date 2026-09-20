@@ -2,10 +2,11 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const session = require("express-session");
 const passport = require("passport");
 require("dotenv").config();
+
+const { apiLimiter } = require("./middleware/rateLimit");
 
 // routes
 const users = require("./routes/users");
@@ -36,14 +37,6 @@ app.use(
     }
   })
 );
-//za rate limit
-/*app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100
-  })
-);*/
-
 /* =========================
   CORS
 ========================= */
@@ -112,6 +105,7 @@ app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 /* =========================
   ROUTES
 ========================= */
+app.use("/api", apiLimiter);
 app.use("/api/users", users);
 app.use("/api/work", work);
 app.use("/api/admin", admin);

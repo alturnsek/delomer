@@ -5,6 +5,7 @@ const fs = require("fs");
 const db = require("../config/db");
 const passport = require("passport");
 const { requireAuth } = require("../middleware/roles");
+const { loginLimiter } = require("../middleware/rateLimit");
 const { uploadAvatar } = require("../middleware/upload");
 const { createInviteToken, sendPasswordChangedEmail, sendAccountClaimedEmail } = require("../utils/invites");
 const { recordLogin } = require("../utils/loginHistory");
@@ -31,7 +32,7 @@ function toPublicUser(user) {
 /* =========================
   LOGIN
 ========================= */
-router.post("/login", (req, res, next) => {
+router.post("/login", loginLimiter, (req, res, next) => {
   passport.authenticate("local", (err, user) => {
     if (err) return next(err);
     if (!user) return res.status(400).json({ message: "Napačen email ali geslo" });
