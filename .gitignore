@@ -17,6 +17,9 @@ ostalo/
 # naložene datoteke uporabnikov (profilne slike ipd.) - persistirajo v Docker volumnu, ne v gitu
 uploads/
 
+# varnostne kopije baze pred migracijami (vsebujejo prave podatke) - glej migrations/run.sh
+migrations/backups/
+
 # lokalna navodila za Claude Code, ne za git
 CLAUDE.md
 
